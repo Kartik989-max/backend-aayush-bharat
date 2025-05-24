@@ -1,0 +1,528 @@
+import React, { useState, useEffect } from "react";
+import { productService } from "@/services/productService";
+import {
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { ID } from "appwrite";
+import { storage } from "@/lib/appwrite";
+import { getFilePreview } from "@/lib/appwrite";
+import { MediaManager } from "../media/MediaManager";
+interface Category {
+  $id: string;
+  name: string;
+}
+import { Trash2,Plus } from "lucide-react";
+import { Label } from "../ui/label";
+import { Button } from "../ui/button";
+import {
+  Form,
+  FormField,
+  FormLabel,
+  FormControl,
+  FormMessage,
+ 
+} from "@/components/ui/form"; 
+import { Select } from "@/components/ui/select";
+import { Textarea } from "../ui/textarea";
+import { Badge } from "../ui/badge";
+interface Product {
+  $id?: string;
+  name: string;
+  description: string;
+  rating: number;
+  category: string;
+  weight: number;
+  image: string;
+  additionalImages: string[];
+  stock: number;
+  price: number;
+  sale_price: number;
+  tags: string;
+  ingredients: string;
+}
+
+interface ProductFormProps {
+  initialData?: Product | null;
+  onSubmit: (data: any) => void;
+}
+
+const ProductCreateForm: React.FC<ProductFormProps> = ({
+  initialData,
+  onSubmit,
+}) => {
+  const [form, setForm] = useState<Product>({
+    name: initialData?.name || "",
+    description: initialData?.description || "",
+    rating: initialData?.rating || 0,
+    category: initialData?.category || "",
+    weight: initialData?.weight || 0,
+    image: initialData?.image || "",
+    additionalImages: initialData?.additionalImages || [],
+    stock: initialData?.stock || 0,
+    price: initialData?.price || 0,
+    sale_price: initialData?.sale_price || 0,
+    tags: initialData?.tags || "",
+    ingredients: initialData?.ingredients || "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initialData?.image ? getFilePreview(initialData.image) : null
+  );
+
+  const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
+  const [additionalImagePreviews, setAdditionalImagePreviews] = useState<
+    string[]
+  >([]);
+
+  const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
+  const [isSelectingAdditional, setIsSelectingAdditional] = useState(false);
+ 
+  const handleMediaSelect = (selectedFiles: { id: string }[]) => {
+
+    
+    if (isSelectingAdditional) {
+     setForm((prev) => ({
+        ...prev,
+        additionalImages: [...prev.additionalImages, selectedFiles],
+      })); 
+      setAdditionalImagePreviews((prev) => [...prev, getFilePreview(selectedFiles)]);
+    } else if (selectedFiles.length > 0) {
+      setForm((prev) => ({ ...prev, image: selectedFiles}));
+      setImagePreview(getFilePreview(selectedFiles));
+    }
+    setIsMediaManagerOpen(false);
+  };
+  
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const cats = await productService.fetchCategories();
+      setCategories(cats);
+      setLoadingCategories(false);
+    };
+    fetchCategories();
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value === "" ? "" : Number(value) }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      let imageFileId = form.image;
+      if (imageFile) {
+        const fileRes = await storage.createFile(
+          process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+          ID.unique(),
+          imageFile
+        );
+        imageFileId = fileRes.$id;
+      }
+
+      let additionalImageIds = [...form.additionalImages];
+      if (additionalImageFiles.length > 0) {
+        const uploadPromises = additionalImageFiles.map((file) =>
+          storage.createFile(
+            process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+            ID.unique(),
+            file
+          )
+        );
+        const results = await Promise.all(uploadPromises);
+        additionalImageIds = results.map((res) => res.$id);
+      }
+
+      const slug = form.name.trim().replace(/\s+/g, "_");
+
+      const submissionData = {
+        ...form,
+        image: imageFileId,
+        additionalImages: additionalImageIds,
+        slug,
+        tags: form.tags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .join(","),
+        ingredients: form.ingredients
+          .split(",")
+          .map((i) => i.trim())
+          .filter(Boolean)
+          .join(","),
+      };
+
+      let data;
+      if (initialData?.$id) {
+        data = await productService.updateProduct(
+          initialData.$id,
+          submissionData
+        );
+      } else {
+        data = await productService.createProduct(submissionData);
+      }
+
+      if (data) console.log("Success:", data);
+      onSubmit(data);
+    } catch (err: any) {
+      setError(err?.message || "Failed to save changes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveProduct=()=>{
+    setForm((prev)=>({ ...prev, image: "" }));
+    setImagePreview("")
+  }
+  
+
+  return (
+          <div>
+
+    <Form
+    
+      onSubmit={handleSubmit}
+      className="space-y-5 max-w-xl mx-auto bg-white p-6 rounded shadow text-lg"
+    >
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+<div className="shadow-lg p-6 rounded-lg">
+  <h1 className="text-xl font-semibold">Basic Information</h1>
+<p className="mb-6">Update product information below. You can drag and drop images to reorder them.</p>
+
+<div className="grid grid-cols-2 gap-4">
+
+      <div>
+        <label>Name</label>
+        <Input
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          className="w-full mt-2 p-2 border rounded"
+          required
+        />
+      </div>
+
+    
+
+      <div>
+        <label>Rating</label>
+        <Input
+          name="rating"
+          type="number"
+          value={form.rating}
+          onChange={handleNumberChange}
+          className="w-full mt-2 p-2 border rounded"
+          min={0}
+          max={5}
+          required
+        />
+      </div>
+
+      <div>
+        <label className="mb-2">Category</label>
+        {loadingCategories ? (
+          <div>Loading categories...</div>
+        ) : (
+          <Select className="mt-2"
+            value={form.category}
+            onValueChange={(value) =>
+              setForm((prev) => ({ ...prev, category: value }))
+            }
+            required
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent className="mt-2">
+              {categories.map((cat) => (
+                <SelectItem key={cat.$id} value={cat.name}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div>
+        <label>Weight</label>
+        <Input
+          name="weight"
+          type="number"
+          value={form.weight}
+          onChange={handleNumberChange}
+          className="w-full p-2 mt-2 border rounded"
+          required
+        />
+      </div>
+
+
+         <div>
+        <label>Stock</label>
+        <input
+          name="stock"
+          type="number"
+          value={form.stock}
+          onChange={handleNumberChange}
+          className="w-full mt-2 p-2 border rounded"
+          min={0}
+          required
+        />
+      </div>
+
+      <div>
+        <label>Price</label>
+        <input
+          name="price"
+          type="number"
+          value={form.price}
+          onChange={handleNumberChange}
+          className="w-full p-2 mt-2 border rounded"
+          min={0}
+          required
+        />
+      </div>
+
+      <div>
+        <label>Sale Price</label>
+        <input
+          name="sale_price"
+          type="number"
+          value={form.sale_price}
+          onChange={handleNumberChange}
+          className="w-full mt-2 p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label>Tags (comma separated)</label>
+        <input
+          name="tags"
+          value={form.tags}
+          onChange={handleChange}
+          className="w-full p-2 mt-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label>Ingredients (comma separated)</label>
+        <input
+          name="ingredients"
+          value={form.ingredients}
+          onChange={handleChange}
+          className="w-full p-2 mt-2 border rounded"
+        />
+      </div>
+
+  <div>
+        <label>Description</label>
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          className="w-full mt-2 p-2 border rounded"
+          required
+        />
+      </div>
+
+</div>
+
+</div>
+   
+<div className="shadow-lg mt-6 p-6 rounded-lg">
+
+<h1>Product Media</h1>
+
+      {/* <div>
+        <label>Image</label>
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="Main Preview"
+            className="w-32 h-32 mt-2 object-cover rounded mb-2"
+          />
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setIsSelectingAdditional(false);
+            setIsMediaManagerOpen(true);
+          }}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Choose Image from Media
+        </button>
+      </div> */}
+
+  <div className="space-y-2">
+      <div>
+        <Label className="text-base">Product Images <span className="text-red-500">*</span></Label>
+        <p className="text-sm text-muted-foreground">Images will automatically sync to ALL variants</p>
+      </div>
+
+      <div className="flex gap-4 flex-wrap mt-2">
+        {imagePreview && (
+          <div  className="relative w-24 h-24 rounded border overflow-hidden">
+            <img
+              src={imagePreview}
+              alt={`Product ${imagePreview}`}
+              width={96}
+              height={96}
+              className="object-cover w-full h-full"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="destructive"
+              className="absolute top-2 right-2 rounded-full w-6 h-6"
+              onClick={() => handleRemoveProduct()}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Add Image Button */}
+        <button
+          type="button"
+           onClick={() => {
+            setIsSelectingAdditional(false);
+            setIsMediaManagerOpen(true);
+          }}
+          className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </div>
+    </div>   
+  <div className="space-y-2">
+      <div>
+        <Label className="text-base">Additional Images <span className="text-red-500">*</span></Label>
+        <p className="text-sm text-muted-foreground">Images will automatically sync to ALL variants</p>
+      </div>
+
+      <div className="flex gap-4 flex-wrap mt-2">
+        {additionalImagePreviews.map((img,index)=> (
+          <div key={index} className="relative w-24 h-24 rounded border overflow-hidden">
+            <img
+              src={img}
+              alt={`Product ${index}`}
+              width={96}
+              height={96}
+              className="object-cover w-full h-full"
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="destructive"
+              className="absolute top-2 right-2 rounded-full w-6 h-6"
+              onClick={}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+)        )}
+
+        {/* Add Image Button */}
+        <button
+          type="button"
+           onClick={() => {
+            setIsSelectingAdditional(false);
+            setIsMediaManagerOpen(true);
+          }}
+          className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </div>
+    </div>   
+
+      <div>
+        <label>Additional Images</label>
+        <div className="flex flex-wrap gap-2">
+          {additionalImagePreviews.map((src, i) => (
+            <img
+              key={i}
+              src={src}
+              alt={`Additional ${i}`}
+              className="w-24 h-24 object-cover rounded"
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setIsMediaManagerOpen(true);
+            setIsSelectingAdditional(true);
+          }}
+          className="mt-2 bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Add More from Media
+        </button>
+      </div>
+
+      </div>
+
+   
+
+      <Button
+        type="submit"
+        className="bg-green-600 text-white px-4 py-2 rounded"
+        disabled={loading}
+      >
+        {loading
+          ? "Saving..."
+          : initialData
+          ? "Update Product"
+          : "Create Product"}
+      </Button>
+    </Form>
+      {isMediaManagerOpen && (
+        <MediaManager
+          isOpen={isMediaManagerOpen}
+          onClose={() => setIsMediaManagerOpen(false)}
+          onSelect={handleMediaSelect}
+          allowMultiple={isSelectingAdditional}
+        />
+      )}
+        
+      </div>
+
+  );
+};
+
+export default ProductCreateForm;

@@ -1,0 +1,121 @@
+.quill-editor {
+  position: relative;
+}
+
+.ql-editor {
+  caret-color: #F9FAFB !important;
+  position: relative;
+  direction: ltr !important;
+  text-align: left !important;
+  min-height: 200px;
+  background-color: #111827 !important;
+  color: #F9FAFB !important;
+  white-space: pre-wrap !important;
+  cursor: text !important;
+}
+
+/* Force LTR for all content */
+.ql-editor p,
+.ql-editor *,
+.ql-container,
+.ql-editor.ql-blank::before {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: embed !important;
+}
+
+/* Common text element styles */
+.ql-editor p,
+.ql-editor ol,
+.ql-editor ul,
+.ql-editor pre,
+.ql-editor blockquote,
+.ql-editor h1,
+.ql-editor h2,
+.ql-editor h3,
+.ql-editor h4,
+.ql-editor h5,
+.ql-editor h6,
+.ql-editor span {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: embed !important;
+  color: #F9FAFB !important;
+}
+
+/* RTL specific overrides */
+[dir="rtl"] .ql-editor {
+  text-align: right !important;
+}
+
+[dir="rtl"] .ql-editor.ql-blank::before {
+  right: 0 !important;
+  left: auto !important;
+  text-align: right !important;
+}
+
+/* Keep toolbar controls visible in RTL */
+.ql-snow .ql-toolbar {
+  direction: ltr !important;
+}
+
+.ql-editor p,
+.ql-editor * {
+  caret-color: #F9FAFB !important;
+  position: relative;
+}
+
+.ql-container {
+  background-color: #111827 !important;
+  border-color: #374151 !important;
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+.ql-editor p {
+  margin: 0;
+  padding: 0;
+  counter-reset: list-0;
+  margin-bottom: 1em !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+.ql-toolbar {
+  background-color: #1F2937 !important;
+  border-color: #374151 !important;
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+.ql-snow .ql-stroke {
+  stroke: #F9FAFB !important;
+}
+
+.ql-snow .ql-fill {
+  fill: #F9FAFB !important;
+}
+
+.ql-snow .ql-picker {
+  color: #F9FAFB !important;
+}
+
+.ql-snow .ql-picker-options {
+  background-color: #1F2937 !important;
+  border-color: #374151 !important;
+}
+
+/* Ensure cursor position is correct */
+.ql-editor.ql-blank::before {
+  left: 0 !important;
+  right: auto !important;
+  text-align: left !important;
+  color: #6B7280 !important;
+}
+
+/* Ensure newlines are preserved */
+.ql-editor br {
+  display: block !important;
+  content: "" !important;
+  margin-top: 1em !important;
+}

@@ -1,38 +1,44 @@
-'use client';
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import HeroForm from './HeroForm';
-import { databases } from '@/lib/appwrite';
-import { Query } from 'appwrite';
-import { Pencil, Trash2 } from 'lucide-react';
-import { Button } from '../ui/button';
+"use client";
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import HeroForm from "./HeroForm";
+import { databases } from "@/lib/appwrite";
+import { Query } from "appwrite";
+import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "../ui/button";
 interface DeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }
 
-const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }: DeleteModalProps) => {
+const DeleteConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+}: DeleteModalProps) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-dark-100 p-6 rounded-lg max-w-md w-full mx-4">
-        <h2 className="text-xl font-bold text-light-100 mb-4">Confirm Delete</h2>
-        <p className="text-light-100/70 mb-6">Are you sure you want to delete this hero section? This action cannot be undone.</p>
+        <h2 className="text-xl font-bold text-light-100 mb-4">
+          Confirm Delete
+        </h2>
+        <p className="text-light-100/70 mb-6">
+          Are you sure you want to delete this hero section? This action cannot
+          be undone.
+        </p>
         <div className="flex gap-4">
-          <button 
+          <Button
             onClick={onConfirm}
             className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
           >
             Delete
-          </button>
-          <button 
-            onClick={onClose}
-            className="flex-1 btn-secondary"
-          >
+          </Button>
+          <Button onClick={onClose} className="flex-1" variant="secondary">
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -53,15 +59,16 @@ const Hero = () => {
 
   const fetchHeroData = async () => {
     try {
-      setError(null);      const response = await databases.listDocuments(
+      setError(null);
+      const response = await databases.listDocuments(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_HERO_COLLECTION_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_HERO_COLLECTION_ID!
       );
-      
+
       setHeroes(response.documents);
     } catch (error: any) {
-      console.error('Failed to fetch hero data:', error);
-      setError(error?.message || 'Failed to load hero data');
+      console.error("Failed to fetch hero data:", error);
+      setError(error?.message || "Failed to load hero data");
     } finally {
       setLoading(false);
     }
@@ -73,7 +80,7 @@ const Hero = () => {
       setEditingId(null);
       setIsAddingNew(false);
     } catch (error: any) {
-      setError(error?.message || 'Failed to update hero');
+      setError(error?.message || "Failed to update hero");
     }
   };
 
@@ -88,15 +95,15 @@ const Hero = () => {
       await fetchHeroData();
       setDeleteId(null);
     } catch (error: any) {
-      console.error('Failed to delete hero:', error);
-      setError(error?.message || 'Failed to delete hero');
+      console.error("Failed to delete hero:", error);
+      setError(error?.message || "Failed to delete hero");
     }
   };
 
   const handleEdit = (hero: any) => {
     const heroFormData = {
       ...hero,
-      $id: hero.$id // Ensure $id is included
+      $id: hero.$id, // Ensure $id is included
     };
     setEditingId(hero.$id);
   };
@@ -122,20 +129,33 @@ const Hero = () => {
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-      
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">Hero Section Manager</h1>
-        <Button 
+
+      <div className="flex justify-between items-center my-8">
+        <h1 className="text-3xl text-primary font-bold ">
+          Hero Section Manager
+        </h1>
+
+        
+    {(isAddingNew || editingId) ? (
+       <Button
+          onClick={() => {setIsAddingNew(false);setEditingId('')}}
+          className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
+        >
+          Back to Hero
+        </Button>
+
+    ):( <Button
           onClick={() => setIsAddingNew(true)}
-          className="btn-primary"
+          className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
         >
           Add Hero
-        </Button>
+        </Button>)}
+       
       </div>
 
       {isAddingNew && (
         <div className="mb-8">
-          <HeroForm 
+          <HeroForm
             onSubmit={handleFormSubmit}
             onCancel={() => setIsAddingNew(false)}
           />
@@ -144,31 +164,33 @@ const Hero = () => {
 
       {editingId && (
         <div className="mb-8">
-          <HeroForm 
+          <HeroForm
             onSubmit={handleFormSubmit}
-            initialData={heroes.find(hero => hero.$id === editingId)}
+            initialData={heroes.find((hero) => hero.$id === editingId)}
             onCancel={() => setEditingId(null)}
           />
         </div>
       )}
 
+    {(!isAddingNew && !editingId) && (
+
+  
       <div className="bg-dark-100 rounded-lg shadow overflow-hidden">
-        <table className="w-full">          <thead>
+        <table className="w-full">
+          <thead>
             <tr className="border-b border-dark-200">
-              <th className="p-3 text-left">Position</th>
+              {/* <th className="p-3 text-left">Position</th> */}
               <th className="p-3 text-left">Video Preview</th>
               <th className="p-3 text-left">Mobile Preview</th>
-              <th className="p-3 text-left">Link</th>
+              <th className="p-3 text-left">Hero Heading</th>
+              <th className="p-3 text-left">Hero Subheading</th>
+              {/* <th className="p-3 text-left">Link</th> */}
               <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {heroes.map((hero) => (              <tr key={hero.$id} className="border-b border-dark-200">
-                <td className="p-3 text-center">
-                  <span className="inline-block bg-dark-200 text-light-100 rounded-full px-3 py-1 text-sm">
-                    {hero.heroHeading || '-'}
-                  </span>
-                </td>
+            {heroes.map((hero) => (
+              <tr key={hero.$id} className="border-b border-dark-200">
                 <td className="p-3">
                   <div className="relative h-20 w-36 rounded overflow-hidden">
                     {hero.videourl ? (
@@ -204,18 +226,21 @@ const Hero = () => {
                   </div>
                 </td>
                 <td className="p-3">
-                  <span className="text-primary">/{hero.slug}</span>
+                  <span className="text-primary">{hero.heroHeading}</span>
+                </td>
+                <td className="p-3">
+                  <span className="text-primary">{hero.heroSubHeading}</span>
                 </td>
                 <td className="p-3">
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={() => handleEdit(hero)}
                       className="p-1 text-blue-500 hover:text-blue-700"
                       title="Edit Hero"
                     >
                       <Pencil className="w-5 h-5" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setDeleteId(hero.$id)}
                       className="p-1 text-red-500 hover:text-red-700"
                       title="Delete Hero"
@@ -234,8 +259,8 @@ const Hero = () => {
           </div>
         )}
       </div>
-
-      <DeleteConfirmationModal 
+  )}
+      <DeleteConfirmationModal
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}
         onConfirm={() => deleteId && handleDelete(deleteId)}

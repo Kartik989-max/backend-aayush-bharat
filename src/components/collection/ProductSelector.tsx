@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import Image from 'next/image'
 import { databases } from '@/lib/appwrite'
-
+import { Button } from '../ui/button'
+import { Product } from '@/types/product'
 interface ProductSelectorProps {
     isOpen: boolean
     onClose: () => void
@@ -17,12 +18,7 @@ interface Collection {
     name: string
 }
 
-interface Product {
-    $id: string
-    name: string
-    image: string
-    product_collection: string[]
-}
+
 
 const ProductSelector = ({ isOpen, onClose, collection, products: initialProducts, onProductsAdded }: ProductSelectorProps) => {
     const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set())
@@ -35,9 +31,9 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
     useEffect(() => {
         if (isOpen) {
             // Filter products that aren't in the collection
-            const availableProducts = initialProducts.filter(product => 
-                !product.product_collection?.includes(collection.$id)
-            );
+            // const availableProducts = initialProducts.filter(product => 
+            //     !product.collections?.includes(collection)
+            // );
             setProducts(availableProducts);
             setTotalDocuments(availableProducts.length);
         } else {
@@ -75,7 +71,7 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
                 const product = products.find(p => p.$id === productId);
                 if (!product) return null;
 
-                const updatedCollections = [...product.product_collection, collection.$id];
+                const updatedCollections = [...product.collections, collection.$id];
                 return databases.updateDocument(
                     process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
                     process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
@@ -129,7 +125,10 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
                                             className="rounded-lg object-cover"
                                         />
                                     </div>
-                                    <h3 className="text-light-100 font-semibold text-sm">{product.name}</h3>
+                                    <Image alt='alt' src={product.image} height={500} width={500} className='h-20 w-20 object-cover rounded'/>
+                                    <h3 className="text-light-100 font-semibold text-base">{product.name}</h3>
+                                    <h3 className="text-light-100 font-semibold text-base">{product.price}</h3>
+                                    <h3 className="text-light-100 font-semibold text-base">{product.stock} Total</h3>
                                 </div>
                             ))}
                         </div>
@@ -188,16 +187,17 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
                         )}
 
                         <div className="mt-6 flex justify-end gap-4">
-                            <button onClick={onClose} className="btn-secondary">
+                            <Button onClick={onClose} variant='destructive'>
                                 Cancel
-                            </button>
-                            <button 
+                            </Button>
+                            <Button 
+                            variant='secondary'
                                 onClick={handleAddProducts}
                                 disabled={selectedProducts.size === 0}
-                                className={`btn-primary ${selectedProducts.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={` ${selectedProducts.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 Add Selected Products ({selectedProducts.size})
-                            </button>
+                            </Button>
                         </div>
                     </>
                 )}

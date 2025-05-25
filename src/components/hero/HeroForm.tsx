@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/Spinner'; // Create this component if n
 import { Input } from '../ui/input';
 import { MediaManager } from '@/components/media/MediaManager';
 import { Button } from '../ui/button';
+import { Plus } from 'lucide-react';
 interface HeroFormProps {
   onSubmit: (data: any) => void;
   initialData?: any;
@@ -170,37 +171,33 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
           <span className="block sm:inline">{error}</span>
         </div>
       )}      <div>
-        <label className="block mb-2 text-light-100">Button Link (Slug)</label>
+        <label className="block mb-2 text-light-100">Hero Heading</label>
         <div className="flex items-center">
-          <span className="bg-dark-200 border border-dark-100 text-light-100/50 px-3 py-3 rounded-l-lg">
-            /
-          </span>
+        
           <Input
             type="text"
-            value={formData.slug}
-            onChange={(e) => setFormData({...formData, slug: e.target.value})}
+            value={formData.heroHeading}
+            onChange={(e) => setFormData({...formData, heroHeading: e.target.value})}
             placeholder="e.g. shop, about, contact"
-            className="w-full p-3 rounded-r-lg bg-dark-200 border border-dark-100 text-light-100"
+            className="w-full p-3 rounded-r-lg bg-dark-200 border border-black text-light-100"
           />
         </div>
-        <p className="text-sm text-light-100/50 mt-1">Enter the page path without leading slash</p>
       </div>
 
       <div>
-        <label className="block mb-2 text-light-100">Title</label>
+        <label className="block mb-2 text-light-100">Hero Subheading</label>
         <div className="flex items-center">
-          <input
+          <Input
             type="text"
             
-            value={formData.heroHeading}
-            onChange={(e) => setFormData({...formData, heroHeading: (e.target.value) || ""})}
-            className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
+            value={formData.heroSubHeading}
+            onChange={(e) => setFormData({...formData, heroSubHeading: (e.target.value) || ""})}
+            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
           />
         </div>
-        <p className="text-sm text-light-100/50 mt-1">Enter the hero title</p>
       </div>
 
-
+{/* 
       <div>
         <label className="block mb-2 text-light-100">Subheading</label>
         <div className="flex items-center">
@@ -213,34 +210,42 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
           />
         </div>
         <p className="text-sm text-light-100/50 mt-1">Enter the hero subheading</p>
-      </div>
+      </div> */}
 
       <div>
         <label className="block mb-2 text-light-100">Video</label>
         <div className="flex gap-4">
-          <Button
+          {/* <Button
             type="button"
             onClick={() => setShowMediaManager('pc')}
             className="btn-secondary"
             disabled={isCompressing || loading}
           >
             Choose from Media
-          </Button>
-          <input
+          </Button> */}
+
+          <Button type="button" onClick={() => setShowMediaManager('pc')}
+  className="w-24 h-24 border-2 border-dashed border-muted flex 
+  items-center justify-center rounded text-muted-foreground
+   hover:bg-muted transition mb-4">
+        <Plus className="w-6 h-6" />
+                </Button>
+          {/* <input
             type="file"
             accept="image/*"
             onChange={(e) => setSelectedPCFile(e.target.files?.[0] || null)}
             className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
             disabled={isCompressing || loading}
-          />
+          /> */}
         </div>
         {previewPCUrl && (
-          <div className="mt-4 relative h-32 w-full rounded-lg overflow-hidden">
+          <div className="mt-4 relative h-50  rounded-lg overflow-hidden">
             <Image
               src={previewPCUrl}
               alt="PC Preview"
-              fill
+              
               className="object-cover"
+              width={500} height={500}
             />
           </div>
         )}
@@ -249,28 +254,27 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
       <div>
         <label className="block mb-2 text-light-100">Mobile Image</label>
         <div className="flex gap-4">
-          <Button
-            type="button"
-            onClick={() => setShowMediaManager('mobile')}
-            className="btn-secondary"
-            disabled={isCompressing || loading}
-          >
-            Choose from Media
-          </Button>
-          <input
+          {/* <Bs */}
+          {/* <input
             type="file"
             accept="image/*"
             onChange={(e) => setSelectedMobileFile(e.target.files?.[0] || null)}
             className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
             disabled={isCompressing || loading}
-          />
+          /> */}
+          <Button type="button" onClick={() => setShowMediaManager('mobile')}
+  className="w-24 h-24 border-2 border-dashed border-muted flex 
+  items-center justify-center rounded text-muted-foreground
+   hover:bg-muted transition mb-4">
+        <Plus className="w-6 h-6" />
+                </Button>
         </div>
         {previewMobileUrl && (
-          <div className="mt-4 relative h-32 w-full rounded-lg overflow-hidden">
+          <div className="mt-4 relative h-50 rounded-lg overflow-hidden">
             <Image
               src={previewMobileUrl}
               alt="Mobile Preview"
-              fill
+              width={500} height={500}
               className="object-cover"
             />
           </div>
@@ -293,7 +297,8 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
       <div className="flex gap-4">
         <Button 
           type="submit" 
-          className="btn-primary flex-1 flex items-center justify-center"
+          variant='secondary'
+          className="flex-1 border flex items-center justify-center"
           disabled={loading || isCompressing}
         >
           {(loading || isCompressing) ? (
@@ -306,6 +311,7 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
           )}
         </Button>
         <Button 
+        variant='destructive'
           type="button" 
           onClick={onCancel}
           className="btn-secondary flex-1"

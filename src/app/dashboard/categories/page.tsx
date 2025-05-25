@@ -6,6 +6,7 @@ import { Pencil, Trash2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card,CardContent} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 interface Category {
   $id: string;
   name: string;
@@ -110,10 +111,10 @@ export default function Categories() {
     <div className="min-h-screen bg-dark-200 py-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">Categories</h1>
+          <h1 className="text-3xl mb-8 text-primary font-bold ">Categories</h1>
           <Link
             href="/dashboard/categories/new"
-            className="bg-dark text-dark px-4 py-2 rounded-md hover:bg-primary/90 transition-colors duration-200 flex items-center gap-2"
+            className="bg-black flex gap-2 text-white px-4  py-2 rounded hover:text-black hover:bg-gray-300"
           >
             <Plus className="w-5 h-5" />
             Add Category
@@ -125,7 +126,7 @@ export default function Categories() {
          
             <div className="grid grid-cols-3 gap-4 bg-dark-100 shadow-lg">
               {currentCategories.map((category) => (
-                <Card key={category.$id} className="hover:bg-dark-200/50 transition-colors w-100 h-80">
+                <Card key={category.$id} className="hover:bg-dark-200/50 transition-colors w-100 h-90">
                   <CardContent className="p-0 m-0 whitespace-nowrap">
                     {category.image ? (
                       <div className="relative mb-2 w-100 h-60 rounded  bg-transparent">
@@ -142,8 +143,11 @@ export default function Categories() {
                       </div>
                     )}
                 
-                  <p className="py-2 px-4 whitespace-nowrap text-sm font-medium text-black">
+                  <p className="py-2 capitalize px-4 whitespace-nowrap text-lg font-medium text-black">
                     {category.name}
+                  </p>
+                  <p className=" capitalize px-4 whitespace-nowrap text-sm font-medium text-black">
+                    {category.sub_text}
                   </p>
                   {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 h-24">
                     {category.sub_text}
@@ -154,19 +158,19 @@ export default function Categories() {
                     </div>
                   </td> */}
                   <div className="p-2 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-4">
+                    <div className="flex items-centerjustify-end gap-4">
                       <Link
                         href={`/dashboard/categories/edit/${category.$id}`}
-                        className="text-primary hover:text-primary/80 transition-colors"
+                        className="text-primary hover:text-primary/80  py-2 px-6 shadow-sm border-2 rounded  transition-colors"
                       >
                         <Pencil className="w-5 h-5" />
                       </Link>
-                      <button
+                      <Button
                         onClick={() => setDeleteId(category.$id)}
-                        className="text-red-500 hover:text-red-400 transition-colors"
+                        className=" py-2 px-6 bg-red-500 rounded   text-white hover:text-red-400 transition-colors"
                       >
                         <Trash2 className="w-5 h-5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                         </CardContent>

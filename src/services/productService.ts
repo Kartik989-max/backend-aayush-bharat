@@ -179,6 +179,7 @@ export const productService = {
       stock: Number(data.stock),
       ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
       slug: data.slug,
+      variants: Array.isArray(data.variants) ? data.variants : [],
     }));
   },
 

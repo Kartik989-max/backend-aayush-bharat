@@ -63,7 +63,7 @@ const DeleteConfirmationModal = ({
           >
             Yes, Delete Product
           </Button>
-          <Button onClick={onClose} className="flex-1 btn-secondary">
+          <Button onClick={onClose} variant='secondary' className="flex-1 border">
             Cancel
           </Button>
         </div>
@@ -76,12 +76,12 @@ const Product = () => {
   const [products, setProducts] = useState<ProductType[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [selectedProduct, setSelectedProduct] =
-    useState<ProductFormData | null>(null);
+    useState<ProductType | null>(null);
   const [currentPage, setCurrentPage] = useState(() => {
     if (typeof window !== "undefined") {
       const savedPage = localStorage.getItem("productsCurrentPage");
       return savedPage ? parseInt(savedPage, 10) : 1;
-    } 
+    }
     return 1;
   });
   const [loading, setLoading] = useState(true);
@@ -89,10 +89,10 @@ const Product = () => {
   const [totalDocuments, setTotalDocuments] = useState(0);
   const productsPerPage = 10;
 
-
-  
-const [sortKey, setSortKey] = useState<"name" | "category" | "stock" | "price" | "$createdAt" | null>(null);
-const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<
+    "name" | "category" | "stock" | "price" | null
+  >(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     localStorage.setItem("productsCurrentPage", currentPage.toString());
@@ -177,13 +177,7 @@ const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   };
 
   const handleEdit = (product: ProductType) => {
-    const productFormData: ProductFormData = {
-      ...product,
-      $id: product.$id,
-    };
-    console.log(productFormData);
-
-    setSelectedProduct(productFormData);
+    setSelectedProduct(product);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -248,21 +242,30 @@ const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold flex gap-2 mt-4 items-center">{showForm ? (
-  <div>  <button onClick={(e)=>{setShowForm(false)}} className="bg-none text-base font-light text-black hover:underline inline-block ">
-          ← Back to Products
-        </button></div>
-):(<></>)
-} Products</h1>
+        <h1 className="text-3xl mb-8 text-primary font-bold flex gap-2 items-center">
+          Products
+        </h1>
 
-
-
-        <Button
-          onClick={() => {setShowForm(true); setSelectedProduct(null)}}
-          className="bg-dark text-dark px-4 py-2 rounded"
-        >
-          Add Product
-        </Button>
+        {showForm ? (
+          <Button
+            onClick={(e) => {
+              setShowForm(false);
+            }}
+            className="bg-dark text-dark px-4 py-2 rounded"
+          >
+            Back to Product
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setShowForm(true);
+              setSelectedProduct(null);
+            }}
+            className="bg-dark text-dark px-4 py-2 rounded"
+          >
+            Add Product
+          </Button>
+        )}
       </div>
 
       {showForm ? (
@@ -276,216 +279,214 @@ const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
             }}
           />
         </div>
-      ):(
+      ) : (
         <div>
-          
+          <div className="bg-white p-4 rounded-lg shadow mb-6">
+            <h2 className="text-lg font-semibold mb-4">Filters</h2>
+            <div className="flex items-center gap-4">
+              <select
+                className="border border-gray-300 rounded-md px-3 py-2 w-64"
+                // Add value and onChange handlers to control category
+              >
+                <option value="">All Categories</option>
+                <option value="dairy">Dairy</option>
+                <option value="Food Grains,oil and masala">
+                  Food Grains, oil and masala
+                </option>
+                <option value="Confectionary Items">Confectionary Items</option>
+                {/* Add your dynamic categories if needed */}
+              </select>
+              <Button
+                variant="outline"
+                className="px-4 py-2 border border-gray-300 rounded-md"
+                onClick={() => {
+                  // Reset filter logic
+                }}
+              >
+                Reset Filters
+              </Button>
+            </div>
+          </div>
 
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <h2 className="text-lg font-semibold mb-4">Filters</h2>
-        <div className="flex items-center gap-4">
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2 w-64"
-            // Add value and onChange handlers to control category
-          >
-            <option value="">All Categories</option>
-            <option value="dairy">Dairy</option>
-            <option value="Food Grains,oil and masala">
-              Food Grains, oil and masala
-            </option>
-            <option value="Confectionary Items">Confectionary Items</option>
-            {/* Add your dynamic categories if needed */}
-          </select>
-          <Button
-            variant="outline"
-            className="px-4 py-2 border border-gray-300 rounded-md"
-            onClick={() => {
-              // Reset filter logic
-            }}
-          >
-            Reset Filters
-          </Button>
-        </div>
-      </div>
+          {/* table  */}
 
-      {/* table  */}
+          <Table className="bg-white shadow-sm rounded-lg text-lg">
+            <TableHeader className="bg-gray-100 text-gray-700 uppercase text-base font-semibold tracking-wide">
+              <TableRow>
+                <TableHead className="px-4 py-3">Image</TableHead>
 
- <Table className="bg-white shadow-sm rounded-lg text-lg">
-  <TableHeader className="bg-gray-100 text-gray-700 uppercase text-base font-semibold tracking-wide">
-    <TableRow>
-      <TableHead className="px-4 py-3">Image</TableHead>
+                <TableHead
+                  onClick={() => handleSort("name")}
+                  className="cursor-pointer hover:underline px-4 py-3"
+                >
+                  Name{" "}
+                  {sortKey === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                </TableHead>
 
-      <TableHead
-        onClick={() => handleSort("name")}
-        className="cursor-pointer hover:underline px-4 py-3"
-      >
-        Name {sortKey === "name" && (sortDirection === "asc" ? "↑" : "↓")}
-      </TableHead>
+                <TableHead
+                  onClick={() => handleSort("category")}
+                  className="cursor-pointer hover:underline px-4 py-3"
+                >
+                  Category{" "}
+                  {sortKey === "category" &&
+                    (sortDirection === "asc" ? "↑" : "↓")}
+                </TableHead>
 
-      <TableHead
-        onClick={() => handleSort("category")}
-        className="cursor-pointer hover:underline px-4 py-3"
-      >
-        Category{" "}
-        {sortKey === "category" && (sortDirection === "asc" ? "↑" : "↓")}
-      </TableHead>
+                <TableHead className="px-4 py-3">Sale</TableHead>
 
-      <TableHead className="px-4 py-3">Sale</TableHead>
+                <TableHead
+                  onClick={() => handleSort("stock")}
+                  className="cursor-pointer hover:underline px-4 py-3"
+                >
+                  Stock{" "}
+                  {sortKey === "stock" && (sortDirection === "asc" ? "↑" : "↓")}
+                </TableHead>
 
-      <TableHead
-        onClick={() => handleSort("stock")}
-        className="cursor-pointer hover:underline px-4 py-3"
-      >
-        Stock {sortKey === "stock" && (sortDirection === "asc" ? "↑" : "↓")}
-      </TableHead>
+                <TableHead
+                  onClick={() => handleSort("price")}
+                  className="cursor-pointer hover:underline px-4 py-3"
+                >
+                  Price{" "}
+                  {sortKey === "price" && (sortDirection === "asc" ? "↑" : "↓")}
+                </TableHead>
 
-      <TableHead
-        onClick={() => handleSort("price")}
-        className="cursor-pointer hover:underline px-4 py-3"
-      >
-        Price {sortKey === "price" && (sortDirection === "asc" ? "↑" : "↓")}
-      </TableHead>
+                <TableHead className="px-4 py-3">Variants</TableHead>
+                <TableHead className="px-4 py-3">Status</TableHead>
+                <TableHead className="px-4 py-3">Action</TableHead>
+              </TableRow>
+            </TableHeader>
 
-      <TableHead className="px-4 py-3">Variants</TableHead>
-      <TableHead className="px-4 py-3">Status</TableHead>
-      <TableHead className="px-4 py-3">Action</TableHead>
-    </TableRow>
-  </TableHeader>
-
-        <TableBody className="text-lg">
-          {sortedProducts.map((product) => (
-            <TableRow
-              key={product.$id}
-              className={`hover:bg-gray-50 ${
-                product.stock < 1 ? "bg-red-50" : ""
-              }`}
-            >
-              <TableCell>
-                <img
-                  src={getImageUrl(product.image)}
-                  alt={product.name}
-                  className="w-10 h-10 object-cover rounded"
-                />
-              </TableCell>
-              <TableCell className="text-lg capitalize font-medium text-gray-800">
-                {product.name}
-              </TableCell>
-              <TableCell className="text-gray-600">
-                {product.category}
-              </TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.stock < 10
-                      ? "bg-red-100 text-red-800"
-                      : "bg-green-100 text-green-800"
+            <TableBody className="text-lg">
+              {sortedProducts.map((product) => (
+                <TableRow
+                  key={product.$id}
+                  className={`hover:bg-gray-50 ${
+                    product.stock < 1 ? "bg-red-50" : ""
                   }`}
                 >
-                  {product.stock < 1
-                    ? "Out of Stock"
-                    : `In Stock (${product.stock})`}
-                </span>
-              </TableCell>
-              <TableCell>₹{product.price}</TableCell>
-              <TableCell>{product.variant || "-"}</TableCell>
-              <TableCell>
-                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                  Active
-                </span>
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="focus:outline-none">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleEdit(product)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </DropdownMenuItem>
-                      <Link href={`/dashboard/products/${product.$id}`} > 
-                    <DropdownMenuItem>
-                    <div className="flex gap-2">
-
-                      <EyeIcon className="mr-2 h-4 w-4" />
-                      View
-                    </div>
-                       
-                    </DropdownMenuItem>
-                      </Link>
-                    <DropdownMenuItem
-                      onClick={() => setDeleteId(product.$id)}
-                      className="text-red-600"
+                  <TableCell>
+                    <img
+                      src={getImageUrl(product.image)}
+                      alt={product.name}
+                      className="w-10 h-10 object-cover rounded"
+                    />
+                  </TableCell>
+                  <TableCell className="text-lg capitalize font-medium text-gray-800">
+                    {product.name}
+                  </TableCell>
+                  <TableCell className="text-gray-600">
+                    {product.category}
+                  </TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        product.stock < 10
+                          ? "bg-red-100 text-red-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                      {product.stock < 1
+                        ? "Out of Stock"
+                        : `In Stock (${product.stock})`}
+                    </span>
+                  </TableCell>
+                  <TableCell>₹{product.price}</TableCell>
+                  <TableCell>{product.variants.length || "-"}</TableCell>
+                  <TableCell>
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                      Active
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="focus:outline-none">
+                        <MoreHorizontal className="w-5 h-5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleEdit(product)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <Link href={`/dashboard/products/${product.$id}`}>
+                          <DropdownMenuItem>
+                            <div className="flex gap-2">
+                              <EyeIcon className="mr-2 h-4 w-4" />
+                              View
+                            </div>
+                          </DropdownMenuItem>
+                        </Link>
+                        <DropdownMenuItem
+                          onClick={() => setDeleteId(product.$id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-      <div className="flex justify-between items-center mt-4 p-4 bg-dark-100 rounded-lg">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
-          >
-            First
-          </button>
-          <button
-            onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
-          >
-            Previous
-          </button>
+          <div className="flex justify-between items-center mt-4 p-4 bg-dark-100 rounded-lg">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
+              >
+                First
+              </button>
+              <button
+                onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
+              >
+                Previous
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-light-100">
+                Page {currentPage} of {totalPages}
+              </span>
+              <span className="text-sm text-light-100/70">
+                ({totalDocuments} total items)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() =>
+                  handlePageChange(Math.min(currentPage + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+
+          <DeleteConfirmationModal
+            isOpen={deleteId !== null}
+            onClose={() => setDeleteId(null)}
+            onConfirm={() => deleteId && handleDelete(deleteId)}
+          />
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-light-100">
-            Page {currentPage} of {totalPages}
-          </span>
-          <span className="text-sm text-light-100/70">
-            ({totalDocuments} total items)
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() =>
-              handlePageChange(Math.min(currentPage + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
-          >
-            Next
-          </button>
-          <button
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-dark-200 text-white rounded disabled:opacity-50"
-          >
-            Last
-          </button>
-        </div>
-      </div>
-
-
-
-      <DeleteConfirmationModal
-      isOpen={deleteId !== null}
-      onClose={() => setDeleteId(null)}
-      onConfirm={() => deleteId && handleDelete(deleteId)}
-      />
-  
-        </div>  )}
+      )}
     </div>
   );
 };

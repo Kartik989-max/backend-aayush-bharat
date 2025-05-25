@@ -7,6 +7,7 @@ import { ArrowLeft, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product as ProductType } from '@/services/productService';
+import { Button } from '@/components/ui/button';
 
 const ProductDetailPage = () => {
   const params = useParams();
@@ -19,8 +20,8 @@ const ProductDetailPage = () => {
   useEffect(() => {
     fetchProduct();
   }, [productId]);
+const imageArray = [...new Set(String(product?.additionalImages).split(','))];
 
-   const imageArray=(String(product?.additionalImages).split(','))
   const fetchProduct = async () => {
     try {
       setLoading(true);
@@ -42,7 +43,8 @@ const ProductDetailPage = () => {
   
   
   const getImageUrl = (fileId: string) => {
-    if (!fileId) return '/placeholder.jpg';
+    // if (!fileId) return '/placeholder.jpg';
+
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
       const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
@@ -105,6 +107,8 @@ const ProductDetailPage = () => {
       </div>
     );
   }
+  console.log(product);
+  
 
   return (
     <div className="p-4">
@@ -128,10 +132,8 @@ const ProductDetailPage = () => {
                     alt={product.name}
                     className="w-full h-auto object-contain rounded-lg"
                     style={{ maxHeight: '400px' }}
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.src = '/placeholder.jpg';
-                    }}
+                    
+
                   />
                 </div>
               ) : (
@@ -149,19 +151,21 @@ const ProductDetailPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {imageArray.map((imgId, idx) => (
                     <div key={imgId} className="relative group">
-                      <img
+                      <Image
                         src={getImageUrl(imgId)}
-                        alt={`${product.name} ${idx + 1}`}
+                        alt={`${product.name}`}
                         className="w-full h-[150px] object-cover rounded-lg"
-                        onError={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          img.src = '/placeholder.jpg';
-                        }}
+                        width={500}
+                        height={500}
+                        // onError={(e) => {
+                        //   const img = e.target as HTMLImageElement;
+                        //   img.src = '/placeholder.jpg';
+                        // }}
                       />
-                      <button
+                      <Button
                         onClick={() => handleRemoveAdditionalImage(imgId)}
                         disabled={deletingImage === imgId}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 opacity-50 group-hover:opacity-100 hover:bg-red-500 transition-opacity"
                         title="Remove image"
                       >
                         {deletingImage === imgId ? (
@@ -169,7 +173,7 @@ const ProductDetailPage = () => {
                         ) : (
                           <Trash2 size={16} />
                         )}
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -217,6 +221,7 @@ const ProductDetailPage = () => {
                     </div>
                   </div>
                 ))} */}
+
               </div>
             </div>
           </div>

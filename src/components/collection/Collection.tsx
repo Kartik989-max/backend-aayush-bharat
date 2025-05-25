@@ -4,13 +4,15 @@ import { databases, storage } from '@/lib/appwrite'
 import { Pencil, Trash2 } from 'lucide-react'
 import CollectionForm from './CollectionForm'
 import Image from 'next/image'
-import CollectionView from './CollectionView'
+// import CollectionView from './CollectionView'
 import { Query } from 'appwrite'
 import { Button } from '../ui/button'
+import { describe } from 'node:test'
 interface Collection {
   $id: string
   name: string
   description: string
+  products:Product[]
 }
 
 interface Product {
@@ -43,7 +45,7 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }: DeleteModalProp
           >
             Delete
           </Button>
-          <Button onClick={onClose} className="flex-1 btn-secondary">
+          <Button onClick={onClose} variant='secondary' className="flex-1">
             Cancel
           </Button>
         </div>
@@ -118,7 +120,6 @@ const Collection = () => {
   }
 
   const getCollectionProducts = (collectionId: string) => {
-    console.log(collectionId);
     return products.filter(product => 
       product.collections.includes(collectionId)
     )
@@ -131,6 +132,8 @@ const Collection = () => {
   }
 
   const handleEdit = (collection: Collection) => {
+    console.log(collection);
+    
     setSelectedCollection(collection)
     setShowForm(true)
   }
@@ -163,18 +166,27 @@ const Collection = () => {
     )
   }
 
-  console.log(products);
   
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-light-100">Collections</h1>
+        <h1 className="text-3xl font-bold text-light-100">Collections</h1>
+
+{showForm ? (<><Button
+          onClick={() => setShowForm(false)}
+          className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
+        >
+          Back to Collection
+        </Button></>):(<>
+     
+
         <Button
-          onClick={() => setShowForm(true)}
-          className="bg-dark text-white px-4 py-2 rounded"
+          onClick={() =>{ setShowForm(true); setSelectedCollection(null)}}
+          className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
         >
           Add Collection
         </Button>
+           </>)}
       </div>
 
       {showForm && (
@@ -188,8 +200,56 @@ const Collection = () => {
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {collections.map((collection) => {
+
+{!showForm && (
+      <div className="overflow-x-auto border rounded-lg">
+
+  <table className=' min-w-full text-sm text-left border-separate border-spacing-y-2'>
+ <thead className="bg-gray-50 text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2">Name</th>
+              <th className="px-4 py-2">Products</th>
+              <th className="px-4 py-2">Description</th>
+              <th className="px-4 py-2 ">Actions</th>
+            </tr>
+          </thead>
+            <tbody>
+            {collections.map((collection) => (
+              <tr key={collection.$id} className="bg-white rounded-md shadow-sm">
+                <td className="px-4 py-3 flex items-center gap-3">
+                  
+                  <span>{collection.name}</span>
+                </td>
+                <td className="px-4 py-3">{collection.products.length} Total</td>
+                <td className="px-4 py-3">{collection.description}</td>
+                <td className="px-4 py-3">
+                   <div className="inline-flex gap-2 justify-end">
+                <Button
+                  onClick={() => handleEdit(collection)}
+                  className="p-1 text-blue-500 hover:text-blue-700"
+                  title="Edit"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={() => setDeleteId(collection.$id)}
+                  className="p-1 text-red-500 hover:text-red-700"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+                </td>
+              </tr>
+      
+            ))}
+          </tbody>
+
+  </table>
+
+
+
+        {/* {collections.map((collection) => {
           const collectionProducts = getCollectionProducts(collection.$id)
           
           return (
@@ -252,16 +312,21 @@ const Collection = () => {
               </div>
             </div>
           )
-        })}
+        })} */}
       </div>
+      )}
 
-      <CollectionView
+
+
+ 
+
+      {/* <CollectionView
         isOpen={viewCollection !== null}
         onClose={() => setViewCollection(null)}
         collection={viewCollection}
         products={products}
         onProductRemoved={fetchProducts}
-      />
+      /> */}
 
       <DeleteConfirmationModal
         isOpen={deleteId !== null}

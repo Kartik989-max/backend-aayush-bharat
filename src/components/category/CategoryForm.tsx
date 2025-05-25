@@ -4,7 +4,12 @@ import { createDocument, uploadFile, getFilePreview, databases, ID } from '@/lib
 import Image from 'next/image';
 import { compressImage } from '@/lib/imageCompression';
 import { Spinner } from '@/components/ui/Spinner';
-
+import { Textarea } from '../ui/textarea';
+import { Input } from '../ui/input';
+import { Plus } from 'lucide-react';
+import { MediaManager } from '../media/MediaManager';
+import { X } from 'lucide-react';
+import { Button } from '../ui/button';
 interface CategoryFormProps {
   onSubmit: (data: any) => void;
   initialData?: any;
@@ -24,7 +29,7 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
   const [error, setError] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionStatus, setCompressionStatus] = useState('');
-
+  const [isMediaManagerOpen,setIsMediaManagerOpen]=useState(false);
   useEffect(() => {
     // Create preview URL for selected file
     if (selectedFile) {
@@ -65,6 +70,22 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
     }
   };
 
+
+
+
+  
+const handleMediaSelect = (fileId: string, url: string ) => {
+  console.log(fileId,url);
+  
+    setFormData((prev) => ({
+      ...prev,
+      image: url,
+    }));
+    setPreviewUrl(url);
+
+  setIsMediaManagerOpen(false);
+};
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -104,32 +125,32 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
       
       <div>
         <label className="block mb-2 text-light-100">Name</label>
-        <input
+        <Input
           type="text"
           value={formData.name}
           onChange={(e) => setFormData({...formData, name: e.target.value})}
-          className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
+          className="w-full p-3 rounded-lg bg-dark-200 border text-light-100"
           required
         />
       </div>
 
       <div>
         <label className="block mb-2 text-light-100">Sub Text</label>
-        <input
+        <Input
           type="text"
           value={formData.sub_text}
           onChange={(e) => setFormData({...formData, sub_text: e.target.value})}
-          className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
+          className="w-full p-3 rounded-lg bg-dark-200 border text-light-100"
           required
         />
       </div>
 
       <div>
         <label className="block mb-2 text-light-100">Description</label>
-        <textarea
+        <Textarea
           value={formData.description}
           onChange={(e) => setFormData({...formData, description: e.target.value})}
-          className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
+          className="w-full p-3 rounded-lg bg-dark-200 border text-light-100"
           rows={4}
           required
         />
@@ -137,13 +158,24 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
 
       <div>
         <label className="block mb-2 text-light-100">Category Image</label>
-        <input
+        {/* <Input
           type="file"
           accept="image/*"
           onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
           className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
           disabled={isCompressing || loading}
-        />
+        /> */}
+  <button
+                          type="button"
+                          onClick={() => {
+                            setIsMediaManagerOpen(true);
+                          }}
+                          className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
+                        >
+                          <Plus className="w-6 h-6" />
+                        </button>
+
+
         {compressionStatus && (
           <div className="mt-2 text-primary flex items-center">
             <Spinner className="w-4 h-4 mr-2" />
@@ -151,14 +183,26 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
           </div>
         )}
         {previewUrl && (
-          <div className="mt-4 relative h-48 w-full rounded-lg overflow-hidden bg-transparent">
+          <div className="mt-4 relative flex justify-start h-48  rounded-lg overflow-hidden bg-transparent">
             <Image
               src={previewUrl}
               alt="Preview"
               fill
-              className="object-contain"
+              className="object-cover w-40 h-40"
               unoptimized
             />
+               <Button
+                    type="button"
+                    onClick={(prev)=>{setFormData((prev) => ({
+      ...prev,
+      image: '',
+    })); setPreviewUrl('')}}
+                     className="absolute top-1 right-1 text-red-400 hover:text-red-600 p-1 bg-dark-100 rounded-full"
+      title="Remove product"
+                    
+                  >
+                    <X/>
+                  </Button>
           </div>
         )}
       </div>
@@ -178,6 +222,7 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
             'Save Changes'
           )}
         </button>
+          
         <button 
           type="button" 
           onClick={onCancel}
@@ -187,6 +232,16 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
           Cancel
         </button>
       </div>
+
+       {isMediaManagerOpen && (
+              <MediaManager
+                // isOpen={isMediaManagerOpen}
+                onClose={() => setIsMediaManagerOpen(false)}
+                onSelect={handleMediaSelect}
+                // allowMultiple={isSelectingAdditional || isSelectingVariantAdditional}
+      
+              />
+            )}
     </form>
   );
 };

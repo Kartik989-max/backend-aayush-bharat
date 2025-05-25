@@ -18,6 +18,7 @@ interface Category {
 import { Trash2, Plus } from "lucide-react";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
+import Image from "next/image";
 import {
   Form,
   FormField,
@@ -30,20 +31,11 @@ import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
 import { Product } from "@/types/product";
 import { databases } from "@/lib/appwrite";
+import { Variants } from "@/types/product";
 interface ProductFormProps {
   initialData: Product | null;
   onSubmit: (data: any) => void;
 }
-
-type Variant = {
-  productId: string;
-  price: number;
-  weight: number;
-  sale_price: number;
-  stock: number;
-  image: string;
-  additionalImages: string[];
-};
 const ProductCreateForm: React.FC<ProductFormProps> = ({
   initialData,
   onSubmit,
@@ -54,7 +46,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     rating: initialData?.rating || 0,
     category: initialData?.category || [],
     weight: initialData?.weight || 0,
-    image: initialData?.image || "",
+    image: initialData?.image || '',
     additionalImages: initialData?.additionalImages || [],
     stock: initialData?.stock || 0,
     price: initialData?.price || 0,
@@ -64,6 +56,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     slug: initialData?.slug || "",
     $id: initialData?.$id || "",
     variants: initialData?.variants || [],
+    collections: initialData?.collections || [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -78,92 +71,109 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   );
 
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
-  const [additionalImagePreviews, setAdditionalImagePreviews] = useState<
-    string[]
-  >([]);
+
+  
+  const arr=initialData?.additionalImages
+    ? String(initialData.additionalImages).split(',').map(str => str.trim()).filter(Boolean).map(id => getFilePreview(id))
+    : [];
+ const [additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>(
+ arr
+);
 
   const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
   const [isSelectingAdditional, setIsSelectingAdditional] = useState(false);
   const [isSelectingVariant, setIsSelectingVariant] = useState(false);
-  const [isSelectingVariantAdditional, setIsSelectingVariantAdditional] = useState(false);
+  const [isSelectingVariantAdditional, setIsSelectingVariantAdditional] =
+    useState(false);
 
-const [variantImagePreviews, setVariantImagePreviews] = useState<string[]>([]);
-const [variantImageIndexes, setVariantImageIndexes] = useState<{index: number | null}>({index: null});
-const [variantAdditionalImagePreviews, setVariantAdditionalImagePreviews] = useState<string[][]>([]);
-// const updateVariantImage = async (index: number, file: File) => {
-//   // Upload file and update image in form state
-//   try {
-//     const fileRes = await storage.createFile(
-//       process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-//       ID.unique(),
-//       file
-//     );
-//     setForm((prev) => {
-//       const updatedVariants = [...prev.variants];
-//       updatedVariants[index].image = fileRes.$id;
-//       return { ...prev, variants: updatedVariants };
-//     });
-//     // Update preview
-//     setVariantImagePreviews((prev) => {
-//       const updated = [...prev];
-//       updated[index] = URL.createObjectURL(file);
-//       return updated;
-//     });
-//   } catch (error) {
-//     // handle error if needed
-//     console.error("Failed to upload variant image", error);
-//   }
-// };
+  const [variantImagePreviews, setVariantImagePreviews] = useState<string[]>(
+    []
+  );
+  const [variantImageIndexes, setVariantImageIndexes] = useState<{
+    index: number | null;
+  }>({ index: null });
+  const [variantAdditionalImagePreviews, setVariantAdditionalImagePreviews] =
+    useState<string[][]>([]);
 
-
-const handleMediaSelect = (fileId: string | string[], url: string | string[], index: string = '') => {
-  if (isSelectingAdditional) {
-    setForm((prev) => ({
-      ...prev,
-      additionalImages: [...prev.additionalImages, ...(Array.isArray(fileId) ? fileId : [fileId])],
-    }));
-    setAdditionalImagePreviews((prev) => [...prev, ...(Array.isArray(url) ? url : [url])]);
-  } else if (isSelectingVariant && variantImageIndexes.index !== null) {
-    setForm((prev) => {
-      const updatedVariants = [...prev.variants];
-      updatedVariants[variantImageIndexes.index!].image = Array.isArray(fileId) ? fileId[0] : fileId;
-      return { ...prev, variants: updatedVariants };
-    });
-    setVariantImagePreviews((prev) => {
-      const updated = [...prev];
-      updated[variantImageIndexes.index!] = Array.isArray(url) ? url[0] : url;
-      return updated;
-    });
-    setIsSelectingVariant(false);
-    setVariantImageIndexes({ index: null });
-  } else if (isSelectingVariantAdditional && variantImageIndexes.index !== null) {
-    setForm((prev) => {
-      const updatedVariants = [...prev.variants];
-      updatedVariants[variantImageIndexes.index!].additionalImages = [
-        ...(updatedVariants[variantImageIndexes.index!].additionalImages || []),
-        ...(Array.isArray(fileId) ? fileId : [fileId]),
-      ];
-      return { ...prev, variants: updatedVariants };
-    });
-    setVariantAdditionalImagePreviews((prev) => {
-      const updated = [...prev];
-      updated[variantImageIndexes.index!] = [
-        ...(updated[variantImageIndexes.index!] || []),
+  const handleMediaSelect = (
+    fileId: string | string[],
+    url: string | string[],
+    index: string = ""
+  ) => {
+    if (isSelectingAdditional) {
+      
+      setForm((prev) => ({
+        ...prev,
+        additionalImages: [
+          ...prev.additionalImages,
+          ...(Array.isArray(fileId) ? fileId : [fileId]),
+        ],
+        
+      }));
+      setAdditionalImagePreviews((prev) => [
+        ...prev,
         ...(Array.isArray(url) ? url : [url]),
-      ];
-      return updated;
-    });
-    setIsSelectingVariantAdditional(false);
-    setVariantImageIndexes({ index: null });
-  } else {
-    setForm((prev) => ({
-      ...prev,
-      image: Array.isArray(fileId) ? fileId[0] : fileId,
-    }));
-    setImagePreview(Array.isArray(url) ? url[0] : url);
-  }
-  setIsMediaManagerOpen(false);
-};
+      ]);
+    } else if (isSelectingVariant && variantImageIndexes.index !== null) {
+      
+   
+      
+      setForm((prev) => {
+        const updatedVariants = [...prev.variants];
+        updatedVariants[variantImageIndexes.index!].image = Array.isArray(fileId)  ? fileId[0] : fileId;
+        
+        return { ...prev, variants: updatedVariants };
+      });
+    
+      
+      setVariantImagePreviews((prev) => {
+        const updated = [...prev];
+        updated[variantImageIndexes.index!] = Array.isArray(url) ? url[0] : url;
+        return updated;
+      });
+      setIsSelectingVariant(false);
+      setVariantImageIndexes({ index: null });
+    } 
+    else if (
+      isSelectingVariantAdditional 
+    ) {
+      
+      setForm((prev) => {
+        const updatedVariants = [...prev.variants];
+ const updatedAdditionalImages = [
+  ...(updatedVariants[variantImageIndexes.index!].additionalImages || []),
+  ...(Array.isArray(fileId) ? fileId : [fileId]),
+];
+
+const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
+
+        updatedVariants[variantImageIndexes.index!].additionalImages = additionalImagesString
+       
+        return { ...prev, variants: updatedVariants };
+      });
+      console.log(Array.isArray(url) ? url : [url]);
+      
+      setVariantAdditionalImagePreviews((prev) => {
+        const updated = [...prev];
+        updated[variantImageIndexes.index!] = [
+          ...(updated[variantImageIndexes.index!] || []),
+          ...(Array.isArray(url) ? url : [url]),
+        ];
+        return updated;
+      });
+      setIsSelectingVariantAdditional(false);
+      setVariantImageIndexes({ index: null });
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        image: Array.isArray(fileId) ? fileId[0] : fileId,
+      }));
+      setImagePreview(Array.isArray(url) ? url[0] : url);
+    }
+    setIsMediaManagerOpen(false);
+  };
+
+  
   useEffect(() => {
     const fetchCategories = async () => {
       const cats = await productService.fetchCategories();
@@ -200,10 +210,12 @@ const handleMediaSelect = (fileId: string | string[], url: string | string[], in
 
     try {
       let imageFileId = form.image;
+    
+      
       if (imageFile) {
         const fileRes = await storage.createFile(
           process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-          ID.unique(),
+          ID.unique(), 
           imageFile
         );
         imageFileId = fileRes.$id;
@@ -223,16 +235,16 @@ const handleMediaSelect = (fileId: string | string[], url: string | string[], in
       }
 
       const slug = form.name.trim().replace(/\s+/g, "_");
-      console.log();
-
+   
       const submissionData = {
         ...form,
         image: imageFileId,
         additionalImages: additionalImageIds,
         slug: slug,
-        variants:[],
+        variants: [],
       };
-
+      console.log(submissionData);
+      
       let data;
       if (initialData?.$id) {
         data = await productService.updateProduct(
@@ -243,70 +255,47 @@ const handleMediaSelect = (fileId: string | string[], url: string | string[], in
         data = await productService.createProduct(submissionData);
       }
 
+
       if (data) console.log("Success:", data);
 
-      const productId=data.$id;
-      const variantIds:string[]=[];
+      // Assert data is an object with $id property
+      const productId = (data as { $id: string }).$id;
+      console.log(productId);
+      
+      const variantIds: string[] = [];
+      
       for (let i = 0; i < form.variants.length; i++) {
-      const variant = form.variants[i];
+        const variant = form.variants[i];
 
-      // If variant image is a file, upload it
-      let variantImageId = variant.image;
-      if (variant.image) {
-        const fileRes = await storage.createFile(
-          process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-          ID.unique(),
-          variantImageId
-        );
-        variantImageId = fileRes.$id;
-      }
-
-      // If additionalImages is an array of files, upload them
-      let variantAdditionalImageIds = variant.additionalImages || [];
-      if (
-        Array.isArray(variant.additionalImages) &&
-        variant.additionalImages.length > 0 &&
-        typeof variant.additionalImages[0] !== "string"
-      ) {
-        const uploadPromises = variant.additionalImages.map((file: File) =>
-          storage.createFile(
-            process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-            ID.unique(),
-            file
-          )
-        );
-        const results = await Promise.all(uploadPromises);
-        variantAdditionalImageIds = results.map((res) => res.$id);
-      }
-
-       // Create variant in DB
        
+        let variantImageId = (variant.image);
+        let variantAdditionalImageIds = variant.additionalImages || [];
+      
+        const variantRes = await databases.createDocument(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+          ID.unique(),
+          {
+            price: Number(variant.price),
+            weight: Number(variant.weight), 
+            stock: Number(variant.stock),
+            sale_price: Number(variant.sale_price),
+            productId,
+            image: variantImageId,
+            additionalImages: String(variantAdditionalImageIds),
+          }
+        );
+        console.log(variantRes);
+        
+        variantIds.push(variantRes.$id);
+      }
 
+      // 6. Update product with variant IDs
+      // await productService.updateProduct(productId, {
+      //   variants: variantIds,
+      // });
 
-       const variantRes = await databases.createDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-        ID.unique(),
-        {
-          price:Number(variant.price),
-          weight:Number(variant.weight),
-          stock:Number(variant.stock),
-          sale_price:Number(variant.sale_price),
-        productId,
-        image: variantImageId,
-        additionalImages: String(variantAdditionalImageIds),
-        }
-      );
-      variantIds.push(variantRes.$id);
-
-    }
-
-    // 6. Update product with variant IDs
-    // await productService.updateProduct(productId, {
-    //   variants: variantIds,
-    // });
-
-    onSubmit({ data, variants: variantIds });
+      onSubmit({ data, variants: variantIds });
     } catch (err: any) {
       setError(err?.message || "Failed to save changes");
     } finally {
@@ -322,92 +311,103 @@ const handleMediaSelect = (fileId: string | string[], url: string | string[], in
   const handleAdditionalImageRemove = (index: number) => {
     setForm((prev) => ({
       ...prev,
-      additionalImages: prev.additionalImages.filter((_, i) => i !== index),
+      additionalImages: (String(prev.additionalImages).split(',')).filter((_, i) => i !== index),
     }));
     setAdditionalImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
- 
-
-  const [variants, setVariants] = useState<Variant[]>([
-    { weight: 0, price: 0, sale_price: 0, stock: 0,productId:form.$id,image:"",additionalImages:"" },
+  const [variants, setVariants] = useState<Variants[]>([
+    {
+      weight: 0,
+      price: 0,
+      sale_price: 0,
+      stock: 0,
+      productId: form.$id,
+      image: "",
+      additionalImages: "",
+      months: 0,
+    },
   ]);
 
-   const addVariant = () => {
-  setForm((prev) => ({
-    ...prev,
-    variants: [
-      ...prev.variants,
-      {productId:'', price: 0, weight: 0, sale_price: 0, image: '', stock: 0 ,additionalImages:''
-      },
-    ],
-  }));
-};
+  const addVariant = () => {
+    setForm((prev) => ({
+      ...prev,
+      variants: [
+        ...prev.variants,
+        {
+          productId: "",
 
-  
-const updateVariant = (index: number, field: keyof Variant, value: any) => {
-  setForm((prev) => {
-    const updatedVariants = [...prev.variants];
-    updatedVariants[index][field] = value;
-    return { ...prev, variants: updatedVariants };
-  });
-};
+          price: 0,
+          weight: 0,
+          months: 0,
+          sale_price: 0,
+          image: "",
+          stock: 0,
+          additionalImages: "",
+        },
+      ],
+    }));
+  };
 
-const removeVariant = (index: number) => {
-  setForm((prev) => {
-    const updatedVariants = prev.variants.filter((_, i) => i !== index);
-    return { ...prev, variants: updatedVariants };
-  });
-};
+  // const updateVariant = (index: number, field:  number, value: any) => {
+  //   setForm((prev) => {
+  //     const updatedVariants = [...prev.variants];
+  //     updatedVariants[index][field] = value;
+  //     return { ...prev, variants: updatedVariants };
+  //   });
+  // };
 
-
-// For variant main image
-const updateVariantImage = async (index: number, file: File) => {
-  try {
-    const fileRes = await storage.createFile(
-      process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-      ID.unique(),
-      file
-    );
+  const removeVariant = (index: number) => {
     setForm((prev) => {
-      const updatedVariants = [...prev.variants];
-      updatedVariants[index].image = fileRes.$id;
+      const updatedVariants = prev.variants.filter((_, i) => i !== index);
       return { ...prev, variants: updatedVariants };
     });
-    // Update preview
-    setVariantImagePreviews((prev) => {
-      const updated = [...prev];
-      updated[index] = URL.createObjectURL(file);
-      return updated;
-    });
-  } catch (error) {
-    console.error("Failed to upload variant image", error);
-  }
-};
-// For variant additional images
-// const addVariantAdditionalImage = (index: number, file: string) => {
-//   setForm((prev) => {
-//     const updated = [...prev.variants];
-//     updated[index].additionalImages = [
-//       ...updated[index].additionalImages,
-//       file,
-//     ];
-//     return { ...prev, variants: updated };
-//   });
-// };
+  };
 
+  // For variant main image
+  const updateVariantImage = async (index: number, file: File) => {
+    try {
+      const fileRes = await storage.createFile(
+        process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+        ID.unique(),
+        file
+      );
+      setForm((prev) => {
+        const updatedVariants = [...prev.variants];
+        updatedVariants[index].image = fileRes.$id;
+        return { ...prev, variants: updatedVariants };
+      });
+      // Update preview
+      setVariantImagePreviews((prev) => {
+        const updated = [...prev];
+        updated[index] = URL.createObjectURL(file);
+        return updated;
+      });
+    } catch (error) {
+      console.error("Failed to upload variant image", error);
+    }
+  };
+  // For variant additional images
+  // const addVariantAdditionalImage = (index: number, file: string) => {
+  //   setForm((prev) => {
+  //     const updated = [...prev.variants];
+  //     updated[index].additionalImages = [
+  //       ...updated[index].additionalImages,
+  //       file,
+  //     ];
+  //     return { ...prev, variants: updated };
+  //   });
+  // };
 
-
-const removeVariantAdditionalImage = (index: number, fileIndex: number) => {
-  setForm((prev) => {
-    const updated = [...prev.variants];
-    updated[index].additionalImages = updated[index].additionalImages.filter(
-      (_, i) => i !== fileIndex
-    );
-    return { ...prev, variants: updated };
-  });
-};
-console.log(form);
+  const removeVariantAdditionalImage = (index: number, fileIndex: number) => {
+    // setForm((prev) => {
+    //   const updated = [...prev.variants];
+    //   updated[index].additionalImages = updated[index].additionalImages.filter(
+    //     (_, i) => i !== fileIndex
+    //   );
+    //   return { ...prev, variants: updated };
+    // });
+  };
 
 
   return (
@@ -579,7 +579,7 @@ console.log(form);
               <div className="flex gap-4 flex-wrap mt-2">
                 {imagePreview && (
                   <div className="relative w-24 h-24 rounded border overflow-hidden">
-                    <img
+                    <Image
                       src={imagePreview}
                       alt={`Product ${imagePreview}`}
                       width={96}
@@ -659,8 +659,6 @@ console.log(form);
                 </button>
               </div>
             </div>
-
-         
           </div>
         </div>
 
@@ -672,7 +670,7 @@ console.log(form);
           {form.variants.map((variant, index) => (
             <div
               key={index}
-              className="grid grid-cols-5 gap-4 items-end border p-4 rounded relative bg-gray-50"
+              className="grid grid-cols-6 gap-4 items-end border p-4 rounded relative bg-gray-50"
             >
               <div className="col-span-2">
                 <label className="text-sm font-medium mb-1 block">
@@ -681,9 +679,20 @@ console.log(form);
                 <Input
                   placeholder="e.g., 100, 500"
                   value={variant.price}
-                  onChange={(e) =>
-                    updateVariant(index, "price", e.target.value)
-                  }
+                  // onChange={(e) =>
+                  //   updateVariant(index, "price", e.target.value)
+                  // }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((prev) => {
+                      const updatedVariants = [...prev.variants];
+                      updatedVariants[index] = {
+                        ...updatedVariants[index],
+                        price: Number(value),
+                      };
+                      return { ...prev, variants: updatedVariants };
+                    });
+                  }}
                 />
               </div>
 
@@ -692,9 +701,21 @@ console.log(form);
                 <Input
                   placeholder="e.g., 100, 500"
                   value={variant.weight}
-                  onChange={(e) =>
-                    updateVariant(index, "weight", e.target.value)
-                  }
+                  // onChange={(e) =>
+                  //   updateVariant(index, "weight", e.target.value)
+                  // }
+
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((prev) => {
+                      const updatedVariants = [...prev.variants];
+                      updatedVariants[index] = {
+                        ...updatedVariants[index],
+                        weight: Number(value),
+                      };
+                      return { ...prev, variants: updatedVariants };
+                    });
+                  }}
                 />
               </div>
 
@@ -705,9 +726,21 @@ console.log(form);
                 <Input
                   type="number"
                   value={variant.sale_price}
-                  onChange={(e) =>
-                    updateVariant(index, "sale_price", e.target.value)
-                  }
+                  // onChange={(e) =>
+                  //   updateVariant(index, "sale_price", e.target.value)
+                  // }
+
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((prev) => {
+                      const updatedVariants = [...prev.variants];
+                      updatedVariants[index] = {
+                        ...updatedVariants[index],
+                        sale_price: Number(value),
+                      };
+                      return { ...prev, variants: updatedVariants };
+                    });
+                  }}
                 />
               </div>
 
@@ -716,23 +749,52 @@ console.log(form);
                 <Input
                   type="number"
                   value={variant.stock}
-                  onChange={(e) =>
-                    updateVariant(index, "stock", e.target.value)
-                  }
+                  // onChange={(e) =>
+                  //   updateVariant(index, "stock", e.target.value)
+                  // }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((prev) => {
+                      const updatedVariants = [...prev.variants];
+                      updatedVariants[index] = {
+                        ...updatedVariants[index],
+                        stock: Number(value),
+                      };
+                      return { ...prev, variants: updatedVariants };
+                    });
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Months</label>
+                <Input
+                  type="number"
+                  value={variant.months}
+                  // onChange={(e) =>
+                  //   updateVariant(index, "stock", e.target.value)
+                  // }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((prev) => {
+                      const updatedVariants = [...prev.variants];
+                      updatedVariants[index] = {
+                        ...updatedVariants[index],
+                        months: Number(value),
+                      };
+                      return { ...prev, variants: updatedVariants };
+                    });
+                  }}
                 />
               </div>
 
-
-
-
-                  <div>
+              <div>
                 <label className="text-sm font-medium mb-1 block">
                   Variant Image
                 </label>
                 <div className="flex flex-row gap-2 mt-2">
                   {variantImagePreviews[index] && (
                     <div className="relative w-24 h-24 rounded border overflow-hidden">
-                      <img
+                      <Image
                         src={variantImagePreviews[index]}
                         alt={`Product ${index}`}
                         width={96}
@@ -745,17 +807,17 @@ console.log(form);
                         variant="destructive"
                         className="absolute top-2 right-2 rounded-full w-6 h-6"
                         onClick={() => {
-            setForm((prev) => {
-              const updatedVariants = [...prev.variants];
-              updatedVariants[index].image = "";
-              return { ...prev, variants: updatedVariants };
-            });
-            setVariantImagePreviews((prev) => {
-              const updated = [...prev];
-              updated[index] = "";
-              return updated;
-            });
-          }}
+                          setForm((prev) => {
+                            const updatedVariants = [...prev.variants];
+                            updatedVariants[index].image = "";
+                            return { ...prev, variants: updatedVariants };
+                          });
+                          setVariantImagePreviews((prev) => {
+                            const updated = [...prev];
+                            updated[index] = "";
+                            return updated;
+                          });
+                        }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -767,16 +829,16 @@ console.log(form);
                     type="button"
                     onClick={() => {
                       setIsSelectingVariant(true);
-        setVariantImageIndexes({index});
-        setIsMediaManagerOpen(true);
+                      setVariantImageIndexes({index});
+                      setIsMediaManagerOpen(true);
+                      setIsSelectingAdditional(false);
+                      setIsSelectingVariantAdditional(false);
                     }}
                     className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
                   >
                     <Plus className="w-6 h-6" />
                   </button>
                 </div>
-
-              
               </div>
 
               <div>
@@ -784,58 +846,62 @@ console.log(form);
                   Aditional Image
                 </label>
                 <div className="flex flex-row gap-2 mt-2">
-                  {(variantAdditionalImagePreviews[index] || []).map((img,imgIdx) => (
-                    <div className="relative w-24 h-24 rounded border overflow-hidden" key={imgIdx}>
-                      <img
-                        src={img}
-                        alt={`Product ${index}`}
-                        width={96}
-                        height={96}
-                        className="object-cover w-full h-full"
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="destructive"
-                        className="absolute top-2 right-2 rounded-full w-6 h-6"
-                        onClick={() => removeVariantAdditionalImage( index,imgIdx)}
+                  {(variantAdditionalImagePreviews[index] || []).map(
+                    (img, imgIdx) => (
+                      <div
+                        className="relative w-24 h-24 rounded border overflow-hidden"
+                        key={imgIdx}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                )  )}
+                        <img
+                          src={img}
+                          alt={`Product ${index}`}
+                          width={96}
+                          height={96}
+                          className="object-cover w-full h-full"
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-2 right-2 rounded-full w-6 h-6"
+                          onClick={() =>
+                            removeVariantAdditionalImage(index, imgIdx)
+                          }
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )
+                  )}
 
                   {/* Add Image Button */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsSelectingVariantAdditional(true);
-setVariantImageIndexes({ index });
-setIsMediaManagerOpen(true);
+                      setVariantImageIndexes({ index });
+                      setIsSelectingAdditional(false);
+                      setIsSelectingVariant(false);
+                      setIsMediaManagerOpen(true);
                     }}
                     className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
                   >
                     <Plus className="w-6 h-6" />
                   </button>
                 </div>
-
-              
-
               </div>
 
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute bottom-4 right-4"
-                  onClick={() => removeVariant(index)}
-                >
-                  <Trash2 size={16} />
-                </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute bottom-4 right-4"
+                onClick={() => removeVariant(index)}
+              >
+                <Trash2 size={16} />
+              </Button>
             </div>
-            
           ))}
-
 
           <Button
             type="button"
@@ -866,7 +932,6 @@ setIsMediaManagerOpen(true);
           onClose={() => setIsMediaManagerOpen(false)}
           onSelect={handleMediaSelect}
           // allowMultiple={isSelectingAdditional || isSelectingVariantAdditional}
-
         />
       )}
     </div>

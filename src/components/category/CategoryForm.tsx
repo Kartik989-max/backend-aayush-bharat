@@ -6,7 +6,7 @@ import { compressImage } from '@/lib/imageCompression';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '../ui/textarea';
 import { Input } from '../ui/input';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { MediaManager } from '../media/MediaManager';
 import { X } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -74,15 +74,15 @@ const CategoryForm = ({ onSubmit, initialData, onCancel }: CategoryFormProps) =>
 
 
   
-const handleMediaSelect = (fileId: string, url: string ) => {
-  console.log(fileId,url);
-  
+const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
+  if (files && files.length > 0) {
+    const file = files[0];
     setFormData((prev) => ({
       ...prev,
-      image: url,
+      image: file.fileId,
     }));
-    setPreviewUrl(url);
-
+    setPreviewUrl(file.url);
+  }
   setIsMediaManagerOpen(false);
 };
 
@@ -185,7 +185,7 @@ const handleMediaSelect = (fileId: string, url: string ) => {
         {previewUrl && (
           <div className="mt-4 relative flex justify-start h-48  rounded-lg overflow-hidden bg-transparent">
             <Image
-              src={previewUrl}
+              src={(previewUrl)}
               alt="Preview"
               fill
               className="object-cover w-40 h-40"
@@ -197,11 +197,11 @@ const handleMediaSelect = (fileId: string, url: string ) => {
       ...prev,
       image: '',
     })); setPreviewUrl('')}}
-                     className="absolute top-1 right-1 text-red-400 hover:text-red-600 p-1 bg-dark-100 rounded-full"
+                     className="absolute top-1 right-1 text-red-400 hover:text-red-600 p-1 bg-white rounded-full"
       title="Remove product"
                     
                   >
-                    <X/>
+                    <Trash2/>
                   </Button>
           </div>
         )}
@@ -238,6 +238,7 @@ const handleMediaSelect = (fileId: string, url: string ) => {
                 // isOpen={isMediaManagerOpen}
                 onClose={() => setIsMediaManagerOpen(false)}
                 onSelect={handleMediaSelect}
+                allowMultiple={false}
                 // allowMultiple={isSelectingAdditional || isSelectingVariantAdditional}
       
               />

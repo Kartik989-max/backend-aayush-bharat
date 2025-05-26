@@ -1,6 +1,6 @@
 import { databases, storage, createDocument, ID } from '@/lib/appwrite';
 import { Models } from 'appwrite';
-import { Variants } from '@/types/product';
+import { Collections, Variants } from '@/types/product';
 export interface BaseProduct {
   name: string;
   description: string;
@@ -16,6 +16,7 @@ export interface BaseProduct {
   ingredients: string[];
   slug:string;
   variants:Variants[];
+  collections:Collections[];
 }
 
 export interface ProductFormData extends BaseProduct {
@@ -180,6 +181,7 @@ export const productService = {
       ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
       slug: data.slug,
       variants: Array.isArray(data.variants) ? data.variants : [],
+      collections:Array.isArray(data.collections) ? data.collections : [],
     }));
   },
 

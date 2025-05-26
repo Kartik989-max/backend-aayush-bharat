@@ -7,8 +7,8 @@ export interface Variants {
   sale_price: number;
   stock: number;
   months:number;
-  image: string;
-  additionalImages:string;
+  image?: string;
+  additionalImages?:string[];
 };
 export interface Collections{
   name:string;

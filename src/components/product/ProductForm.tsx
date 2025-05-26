@@ -72,7 +72,9 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
 
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
 
-  
+   console.log('initaldata',initialData);
+   
+    
   const arr=initialData?.additionalImages
     ? String(initialData.additionalImages).split(',').map(str => str.trim()).filter(Boolean).map(id => getFilePreview(id))
     : [];
@@ -80,6 +82,21 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
  arr
 );
 
+// const [additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>([]);
+
+// useEffect(() => {
+//   if (initialData?.additionalImages) {
+//     // Split the string, trim, filter out empty, and map to preview URLs
+//     const arr = String(initialData.additionalImages)
+//       .split(',')
+//       .map(str => str.trim())
+//       .filter(Boolean)
+//       .map(id => getFilePreview(id));
+//     setAdditionalImagePreviews(arr);
+//   } else {
+//     setAdditionalImagePreviews([]);
+//   }
+// }, [initialData?.additionalImages]);
   const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
   const [isSelectingAdditional, setIsSelectingAdditional] = useState(false);
   const [isSelectingVariant, setIsSelectingVariant] = useState(false);
@@ -98,61 +115,112 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   const handleMediaSelect = (
     fileId: string | string[],
     url: string | string[],
-    index: string = ""
+    index: number = 0
   ) => {
-    if (isSelectingAdditional) {
-      
+    if (isSelectingAdditional) {        
       setForm((prev) => ({
-        ...prev,
-        additionalImages: [
-          ...prev.additionalImages,
-          ...(Array.isArray(fileId) ? fileId : [fileId]),
-        ],
-        
-      }));
+  ...prev,
+  additionalImages: [
+    ...(Array.isArray(prev.additionalImages)
+      ? prev.additionalImages
+      : String(prev.additionalImages)?.split(',') || []),
+    ...(Array.isArray(fileId) ? fileId : [fileId]),
+  ],
+}));
+
       setAdditionalImagePreviews((prev) => [
         ...prev,
         ...(Array.isArray(url) ? url : [url]),
       ]);
-    } else if (isSelectingVariant && variantImageIndexes.index !== null) {
-      
-   
-      
-      setForm((prev) => {
-        const updatedVariants = [...prev.variants];
-        updatedVariants[variantImageIndexes.index!].image = Array.isArray(fileId)  ? fileId[0] : fileId;
-        
-        return { ...prev, variants: updatedVariants };
-      });
+
+
+
+    }
     
-      
-      setVariantImagePreviews((prev) => {
-        const updated = [...prev];
-        updated[variantImageIndexes.index!] = Array.isArray(url) ? url[0] : url;
-        return updated;
-      });
-      setIsSelectingVariant(false);
-      setVariantImageIndexes({ index: null });
-    } 
+  else if (isSelectingVariantAdditional && variantImageIndexes.index !== null) {
+  const variantIdx = variantImageIndexes.index;
+
+  setForm((prev) => {
+    const updatedVariants = [...prev.variants];
+    const currentAdditional = Array.isArray(updatedVariants[variantIdx].additionalImages)
+      ? updatedVariants[variantIdx].additionalImages
+      : typeof updatedVariants[variantIdx].additionalImages === 'string'
+        ? updatedVariants[variantIdx].additionalImages.split(',')
+        : [];
+
+    const newIds = Array.isArray(fileId) ? fileId : [fileId];
+
+    // Merge and deduplicate
+    const merged = Array.from(new Set([...currentAdditional, ...newIds]));
+
+    updatedVariants[variantIdx] = {
+      ...updatedVariants[variantIdx],
+      additionalImages: merged,
+    };
+
+    return { ...prev, variants: updatedVariants };
+  });
+
+  setVariantAdditionalImagePreviews((prev) => {
+    const updated = [...prev];
+    const newUrls = Array.isArray(url) ? url : [url];
+
+    updated[variantIdx] = [
+      ...(updated[variantIdx] || []),
+      ...newUrls,
+    ];
+    return updated;
+  });
+
+  setIsSelectingVariantAdditional(false);
+  setVariantImageIndexes({ index: null });
+}
+
     else if (
-      isSelectingVariantAdditional 
+      isSelectingVariantAdditional && variantImageIndexes.index !== null
     ) {
       
-      setForm((prev) => {
-        const updatedVariants = [...prev.variants];
- const updatedAdditionalImages = [
-  ...(updatedVariants[variantImageIndexes.index!].additionalImages || []),
-  ...(Array.isArray(fileId) ? fileId : [fileId]),
-];
+//       setForm((prev) => {
+//         const updatedVariants = [...prev.variants];
+//  const updatedAdditionalImages = [
+//   ...(updatedVariants[variantImageIndexes.index!].additionalImages || []),
+//   ...(Array.isArray(fileId) ? fileId : [fileId]),
+// ];
 
-const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
+// const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
 
-        updatedVariants[variantImageIndexes.index!].additionalImages = additionalImagesString
+//         updatedVariants[variantImageIndexes.index!].additionalImages = additionalImagesString
        
-        return { ...prev, variants: updatedVariants };
-      });
-      console.log(Array.isArray(url) ? url : [url]);
-      
+//         return { ...prev, variants: updatedVariants };
+//       });
+
+setForm((prev) => {
+  const newFileIds = Array.isArray(fileId) ? fileId : [fileId];
+
+  const updatedVariants = [...prev.variants];
+  const targetVariant = updatedVariants[index]; // index is given
+  console.log(form);
+  
+  updatedVariants[index] = {
+    ...targetVariant,
+    additionalImages: [
+      ...(Array.isArray(targetVariant.additionalImages)
+        ? targetVariant.additionalImages
+        : typeof targetVariant.additionalImages === 'string'
+        ? String(targetVariant.additionalImages).split(',')
+        : []),
+      ...newFileIds,
+    ],
+  };
+  console.log(form);
+  
+
+  return {
+    ...prev,
+    variants: updatedVariants,
+  };
+});
+
       setVariantAdditionalImagePreviews((prev) => {
         const updated = [...prev];
         updated[variantImageIndexes.index!] = [
@@ -222,6 +290,8 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
       }
 
       let additionalImageIds = [...form.additionalImages];
+      console.log('additionImageid',additionalImageIds);
+      
       if (additionalImageFiles.length > 0) {
         const uploadPromises = additionalImageFiles.map((file) =>
           storage.createFile(
@@ -232,10 +302,13 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
         );
         const results = await Promise.all(uploadPromises);
         additionalImageIds = results.map((res) => res.$id);
+        console.log(additionalImageIds);
+        
+        
       }
 
       const slug = form.name.trim().replace(/\s+/g, "_");
-   
+      
       const submissionData = {
         ...form,
         image: imageFileId,
@@ -265,9 +338,7 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
       const variantIds: string[] = [];
       
       for (let i = 0; i < form.variants.length; i++) {
-        const variant = form.variants[i];
-
-       
+        const variant = form.variants[i];   
         let variantImageId = (variant.image);
         let variantAdditionalImageIds = variant.additionalImages || [];
       
@@ -303,6 +374,7 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
     }
   };
 
+  
   const handleRemoveProduct = () => {
     setForm((prev) => ({ ...prev, image: "" }));
     setImagePreview("");
@@ -324,7 +396,7 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
       stock: 0,
       productId: form.$id,
       image: "",
-      additionalImages: "",
+      additionalImages: [],
       months: 0,
     },
   ]);
@@ -343,7 +415,7 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
           sale_price: 0,
           image: "",
           stock: 0,
-          additionalImages: "",
+          additionalImages: [],
         },
       ],
     }));
@@ -603,6 +675,8 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
                   type="button"
                   onClick={() => {
                     setIsSelectingAdditional(false);
+                    setIsSelectingVariant(false);
+                    setIsSelectingVariantAdditional(false);
                     setIsMediaManagerOpen(true);
                   }}
                   className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
@@ -616,9 +690,7 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
                 <Label className="text-base">
                   Additional Images <span className="text-red-500">*</span>
                 </Label>
-                <p className="text-sm text-muted-foreground">
-                  Images will automatically sync to ALL variants
-                </p>
+              
               </div>
 
               <div className="flex gap-4 flex-wrap mt-2">
@@ -627,7 +699,7 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
                     key={index}
                     className="relative w-24 h-24 rounded border overflow-hidden"
                   >
-                    <img
+                    <Image
                       src={img}
                       alt={`Product ${index}`}
                       width={96}
@@ -651,6 +723,8 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
                   type="button"
                   onClick={() => {
                     setIsSelectingAdditional(true);
+                    setIsSelectingVariant(false);
+                    setIsSelectingVariantAdditional(false);
                     setIsMediaManagerOpen(true);
                   }}
                   className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
@@ -852,8 +926,8 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
                         className="relative w-24 h-24 rounded border overflow-hidden"
                         key={imgIdx}
                       >
-                        <img
-                          src={img}
+                        <Image
+                          src={img || ""}
                           alt={`Product ${index}`}
                           width={96}
                           height={96}
@@ -939,3 +1013,5 @@ const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
 };
 
 export default ProductCreateForm;
+
+

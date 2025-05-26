@@ -7,7 +7,7 @@ import Image from 'next/image'
 // import CollectionView from './CollectionView'
 import { Query } from 'appwrite'
 import { Button } from '../ui/button'
-import { describe } from 'node:test'
+import { Product } from '@/types/product'
 interface Collection {
   $id: string
   name: string
@@ -15,12 +15,7 @@ interface Collection {
   products:Product[]
 }
 
-interface Product {
-  $id: string
-  name: string
-  image: string
-  collections: string[]
-}
+
 
 interface DeleteModalProps {
   isOpen: boolean
@@ -119,11 +114,11 @@ const Collection = () => {
     )
   }
 
-  const getCollectionProducts = (collectionId: string) => {
-    return products.filter(product => 
-      product.collections.includes(collectionId)
-    )
-  }
+  // const getCollectionProducts = (collectionId: string) => {
+  //   return products.filter(product => 
+  //     product.collections.includes(collectionId)
+  //   )
+  // }
 
   const handleFormSubmit = async () => {
     await fetchCollections()

@@ -86,15 +86,15 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
     }
   };
 
-  const handlePCImageSelect = (fileId: string, url: string) => {
-    setFormData({ ...formData, videourl: url });
-    setPreviewPCUrl(url);
+  const handlePCImageSelect = (files: { fileId: string; url: string }[]) => {
+    setFormData({ ...formData, videourl: files[0].url });
+    setPreviewPCUrl(files[0].url);
     setShowMediaManager(false);
   };
 
-  const handleMobileImageSelect = (fileId: string, url: string) => {
-    setFormData({ ...formData, mobile_image: url });
-    setPreviewMobileUrl(url);
+  const handleMobileImageSelect = (files: { fileId: string; url: string }[]) => {
+    setFormData({ ...formData, mobile_image: files[0].url });
+    setPreviewMobileUrl(files[0].url);
     setShowMediaManager(false);
   };
 

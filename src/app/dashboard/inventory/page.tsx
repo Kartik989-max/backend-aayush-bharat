@@ -39,7 +39,7 @@ export default function InventoryPage() {
   const [currentProductId, setCurrentProductId] = useState<string | null>(null);
   const [isSelectingMainImage, setIsSelectingMainImage] = useState(true);
 
-  const handleFileSelection = (fileId: string, url: string) => {
+  const handleFileSelection = (files: { fileId: string; url: string }[]) => {
     if (!currentProductId) return;
 
     if (isSelectingMainImage) {
@@ -47,12 +47,12 @@ export default function InventoryPage() {
         ...prev,
         [currentProductId]: {
           ...prev[currentProductId],
-          imageFile: fileId,
+          imageFile: files[0].fileId,
         },
       }));
       setVariantImagePreviews((prev) => ({
         ...prev,
-        [currentProductId]: url,
+        [currentProductId]: files[0].url,
       }));
     } else {
       setFormData((prev) => ({
@@ -61,13 +61,13 @@ export default function InventoryPage() {
           ...prev[currentProductId],
           additionalImages: [
             ...(prev[currentProductId]?.additionalImages || []),
-            fileId,
+             ...files.map((file) => file.fileId), 
           ],
         },
       }));
       setVariantAdditionalImagePreviews((prev) => ({
         ...prev,
-        [currentProductId]: [...(prev[currentProductId] || []), url],
+        [currentProductId]: [...(prev[currentProductId] || []), ...files.map((fileurl)=>fileurl.url)],
       }));
     }
 
@@ -141,6 +141,7 @@ export default function InventoryPage() {
   const handleAddVariant = async (productId: string) => {
 
     const data = formData[productId];
+
     if (
   data?.price === undefined ||
   data?.weight === undefined ||
@@ -153,9 +154,9 @@ export default function InventoryPage() {
 }
 
 
-   
     
     try {
+    
       
       const newVariant = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -169,10 +170,12 @@ export default function InventoryPage() {
           sale_price: Number(data.sale_price),
           stock: Number(data.stock),
           image: data.imageFile,
-          additionalImages: data.additionalImages?.join(","),
+          additionalImages:(data.additionalImages).join(','),
         }
       );
 
+      console.log(newVariant);
+      
       const product = items.find((item) => item.$id === productId);
       const existingVariants = product?.variants || [];
 
@@ -302,13 +305,17 @@ export default function InventoryPage() {
                                 key={index}
                                 className="border p-3 rounded-md flex flex-col md:flex-row gap-4 items-center justify-between mb-2"
                               >
-                                <Image
+                                {(typeof variant.image=='object' ||    variant.image=='') ? (
+                                    <>No Image</>
+                                ):(
+                                  <Image
+                                  src={getFilePreview(variant?.image)!}
                                   alt={variant.price}
-                                  src={getFilePreview(variant?.image)}
                                   height={50}
                                   width={50}
-                                />
-                                <span>Price: ₹{variant.price}</span>
+                                  />
+                                )}
+                                <span>Price: ₹{ variant.price}</span>
                                 <span>Weight: {variant.weight}</span>
                                 <span>Sale Price: ₹{variant.sale_price}</span>
                                 <span>Months: {variant.months}</span>
@@ -413,9 +420,9 @@ export default function InventoryPage() {
                                     </Button>
                                     {variantImagePreviews[item.$id] && (
                                       <div className="relative w-24 h-24 rounded border overflow-hidden">
-
+                                      
                                       <Image
-                                        src={variantImagePreviews[item.$id]!}
+                                        src={variantImagePreviews[item.$id] || "https://www.freeiconspng.com/images/no-image-icon"}
                                         alt="Preview"
                                         width={500}
                                         height={500}

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { databases } from '@/lib/appwrite';
+import { databases, getFilePreview } from '@/lib/appwrite';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -104,8 +104,6 @@ export default function Categories() {
       </div>
     );
   }
-
-  console.log(categories);
   
   return (
     <div className="min-h-screen bg-dark-200 py-8">
@@ -131,7 +129,7 @@ export default function Categories() {
                     {category.image ? (
                       <div className="relative mb-2 w-100 h-60 rounded  bg-transparent">
                         <Image
-                          src={category.image}
+                          src={getFilePreview( category.image)}
                           alt={category.name}
                           fill
                           className='object-cover w-100'

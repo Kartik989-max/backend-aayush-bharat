@@ -36,8 +36,9 @@ export default function InventoryPage() {
   }>({});
 
   const [showMediaManager, setShowMediaManager] = useState(false);
+  const [showMediaAdditionalManager, setShowMediaAdditionalManager] = useState(false);
   const [currentProductId, setCurrentProductId] = useState<string | null>(null);
-  const [isSelectingMainImage, setIsSelectingMainImage] = useState(true);
+  const [isSelectingMainImage, setIsSelectingMainImage] = useState(true); 
 
   const handleFileSelection = (files: { fileId: string; url: string }[]) => {
     if (!currentProductId) return;
@@ -70,7 +71,7 @@ export default function InventoryPage() {
         [currentProductId]: [...(prev[currentProductId] || []), ...files.map((fileurl)=>fileurl.url)],
       }));
     }
-
+    setShowMediaAdditionalManager(false)
     setShowMediaManager(false);
   };
 
@@ -413,6 +414,7 @@ export default function InventoryPage() {
                                         setCurrentProductId(item.$id);
                                         setIsSelectingMainImage(true);
                                         setShowMediaManager(true);
+                                        
                                       }}
                                       className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
                                     >
@@ -464,9 +466,10 @@ export default function InventoryPage() {
                                     <Button
                                       variant="outline"
                                       onClick={() => {
+                                        setShowMediaAdditionalManager(true);
                                         setCurrentProductId(item.$id);
                                         setIsSelectingMainImage(false);
-                                        setShowMediaManager(true);
+                                        
                                       }}
                                       className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
                                     >
@@ -510,6 +513,14 @@ export default function InventoryPage() {
                                 <MediaManager
                                   onClose={() => setShowMediaManager(false)}
                                   onSelect={handleFileSelection}
+                                  // allowMultiple={!isSelectingMainImage}
+                                />
+                              )}
+                              {showMediaAdditionalManager && (
+                                <MediaManager
+                                  onClose={() => setShowMediaAdditionalManager(false)}
+                                  onSelect={handleFileSelection}
+                                  allowMultiple={true}
                                   // allowMultiple={!isSelectingMainImage}
                                 />
                               )}

@@ -270,14 +270,14 @@ const Product = () => {
 
       {showForm ? (
         <div className="mb-6">
-          <ProductForm
+          {/* <ProductForm
             initialData={selectedProduct} // Pass selected product for editing
             onSubmit={handleFormSubmit}
             onCancel={() => {
               setShowForm(false);
               setSelectedProduct(null);
             }}
-          />
+          /> */}
         </div>
       ) : (
         <div>

@@ -13,10 +13,12 @@ import { Product } from '@/types/product';
 
 
 interface ProductModelProps {
-  onClose: () => void
-  onSelect: (products: Product[]) => void
+  onClose: () => void;
+  onSelect: (products: Product[]) => void;
   selectedIds?: string[]
 }
+
+
 const ITEMS_PER_PAGE = 10;
 
 export const ProductModel = ({ onClose, onSelect, selectedIds = [] }: ProductModelProps) => {
@@ -64,6 +66,7 @@ export const ProductModel = ({ onClose, onSelect, selectedIds = [] }: ProductMod
       tags: doc.tags ?? [],
       ingredients: doc.ingredients ?? [],
       slug: doc.slug ?? "",
+      collections:doc.collections ?? [],
     }))
     onSelect(selected) // Send selected product objects
     onClose()          // Close the modal

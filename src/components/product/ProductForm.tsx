@@ -64,6 +64,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
+  const [showMediaAdditionalManager, setShowMediaAdditionalManager] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [imagePreview, setImagePreview] = useState<string | null>(
@@ -71,8 +72,6 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   );
 
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
-
-   console.log('initaldata',initialData);
    
     
   const arr=initialData?.additionalImages
@@ -82,26 +81,14 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
  arr
 );
 
-// const [additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>([]);
-
-// useEffect(() => {
-//   if (initialData?.additionalImages) {
-//     // Split the string, trim, filter out empty, and map to preview URLs
-//     const arr = String(initialData.additionalImages)
-//       .split(',')
-//       .map(str => str.trim())
-//       .filter(Boolean)
-//       .map(id => getFilePreview(id));
-//     setAdditionalImagePreviews(arr);
-//   } else {
-//     setAdditionalImagePreviews([]);
-//   }
-// }, [initialData?.additionalImages]);
   const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
+  const [isMediaAdditionalManagerOpen, setIsMediaAdditionalManagerOpen] = useState(false);
+
   const [isSelectingAdditional, setIsSelectingAdditional] = useState(false);
   const [isSelectingVariant, setIsSelectingVariant] = useState(false);
   const [isSelectingVariantAdditional, setIsSelectingVariantAdditional] =
     useState(false);
+    
 
   const [variantImagePreviews, setVariantImagePreviews] = useState<string[]>(
     []
@@ -112,9 +99,11 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   const [variantAdditionalImagePreviews, setVariantAdditionalImagePreviews] =
     useState<string[][]>([]);
 
+
+
+
   const handleMediaSelect = (
-    fileId: string | string[],
-    url: string | string[],
+   files: { fileId: string; url: string }[],
     index: number = 0
   ) => {
     if (isSelectingAdditional) {        
@@ -124,13 +113,13 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     ...(Array.isArray(prev.additionalImages)
       ? prev.additionalImages
       : String(prev.additionalImages)?.split(',') || []),
-    ...(Array.isArray(fileId) ? fileId : [fileId]),
+    ...files.map((file) => file.fileId), 
   ],
 }));
 
       setAdditionalImagePreviews((prev) => [
         ...prev,
-        ...(Array.isArray(url) ? url : [url]),
+        ...files.map((file) => file.url), 
       ]);
 
 
@@ -140,30 +129,37 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   else if (isSelectingVariantAdditional && variantImageIndexes.index !== null) {
   const variantIdx = variantImageIndexes.index;
 
-  setForm((prev) => {
-    const updatedVariants = [...prev.variants];
-    const currentAdditional = Array.isArray(updatedVariants[variantIdx].additionalImages)
-      ? updatedVariants[variantIdx].additionalImages
-      : typeof updatedVariants[variantIdx].additionalImages === 'string'
-        ? updatedVariants[variantIdx].additionalImages.split(',')
-        : [];
+setForm((prev) => {
+  const updatedVariants = [...prev.variants];
 
-    const newIds = Array.isArray(fileId) ? fileId : [fileId];
+  // Ensure current additionalImages is always an array
+  let currentImages = updatedVariants[variantIdx].additionalImages;
 
-    // Merge and deduplicate
-    const merged = Array.from(new Set([...currentAdditional, ...newIds]));
+  if (!Array.isArray(currentImages)) {
+    currentImages = typeof currentImages === 'string' && currentImages !== ''
+      ? [currentImages]
+      : [];
+  }
 
-    updatedVariants[variantIdx] = {
-      ...updatedVariants[variantIdx],
-      additionalImages: merged,
-    };
+  // Convert fileId to array if it's not already
+  const newImages = files.map((file)=>file.fileId);
 
-    return { ...prev, variants: updatedVariants };
-  });
+  // Merge and remove duplicates
+  const merged = Array.from(new Set([...currentImages, ...newImages]));
+
+  // Update the variant
+  updatedVariants[variantIdx] = {
+    ...updatedVariants[variantIdx],
+    additionalImages: merged,
+  };
+
+  return { ...prev, variants: updatedVariants };
+});
+
 
   setVariantAdditionalImagePreviews((prev) => {
     const updated = [...prev];
-    const newUrls = Array.isArray(url) ? url : [url];
+    const newUrls = files.map((file)=>file.url);
 
     updated[variantIdx] = [
       ...(updated[variantIdx] || []),
@@ -177,67 +173,87 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
 }
 
     else if (
-      isSelectingVariantAdditional && variantImageIndexes.index !== null
+      isSelectingVariant && variantImageIndexes.index !== null
     ) {
       
-//       setForm((prev) => {
-//         const updatedVariants = [...prev.variants];
-//  const updatedAdditionalImages = [
-//   ...(updatedVariants[variantImageIndexes.index!].additionalImages || []),
-//   ...(Array.isArray(fileId) ? fileId : [fileId]),
-// ];
 
-// const additionalImagesString = [...new Set(updatedAdditionalImages)].join(',');
+// setForm((prev) => {
+  // const newFileIds = ;
 
-//         updatedVariants[variantImageIndexes.index!].additionalImages = additionalImagesString
-       
-//         return { ...prev, variants: updatedVariants };
-//       });
+  // const updatedVariants = [...prev.variants];
+  // const targetVariant = updatedVariants[index];
+  
+  // updatedVariants[index] = {
+  //   ...targetVariant,
+  //   additionalImages: [
+  //     ...(Array.isArray(targetVariant.additionalImages)
+  //             ? targetVariant.additionalImages
+  //             : typeof targetVariant.additionalImages === 'string'
+  //             ? String(targetVariant.additionalImages).split(',')
+  //             : []),
+  //           ...newFileIds,
+  //         ], 
+  //       };
+        
+      
+  //       return {
+  //         ...prev,
+  //         variants: updatedVariants,
+  //       };
+  //       });
 
+  //     setVariantImagePreviews((prev) => {
+  //       const updated = [...prev];
+  //       updated[variantImageIndexes.index!] = [
+  //         ...(updated[variantImageIndexes.index!] || []),
+  //         ...(Array.isArray(url) ? url : [url]),
+  //       ];
+  //       return updated;
+  //     });
+  //     setIsSelectingVariant(false);
+  //     setVariantImageIndexes({ index: null });
+
+
+
+
+
+  // Update the form with new image IDs for a specific variant
 setForm((prev) => {
-  const newFileIds = Array.isArray(fileId) ? fileId : [fileId];
 
   const updatedVariants = [...prev.variants];
-  const targetVariant = updatedVariants[index]; // index is given
-  console.log(form);
-  
-  updatedVariants[index] = {
-    ...targetVariant,
-    additionalImages: [
-      ...(Array.isArray(targetVariant.additionalImages)
-        ? targetVariant.additionalImages
-        : typeof targetVariant.additionalImages === 'string'
-        ? String(targetVariant.additionalImages).split(',')
-        : []),
-      ...newFileIds,
-    ],
-  };
-  console.log(form);
-  
 
+  updatedVariants[index] = {
+    ...updatedVariants[index],
+    image: files[index].fileId, // set image to the given fileId
+  };
   return {
     ...prev,
     variants: updatedVariants,
   };
 });
 
-      setVariantAdditionalImagePreviews((prev) => {
-        const updated = [...prev];
-        updated[variantImageIndexes.index!] = [
-          ...(updated[variantImageIndexes.index!] || []),
-          ...(Array.isArray(url) ? url : [url]),
-        ];
-        return updated;
-      });
-      setIsSelectingVariantAdditional(false);
-      setVariantImageIndexes({ index: null });
-    } else {
+// Update the image preview URLs for the same variant
+setVariantImagePreviews((prev) => {
+   const updated = [...prev];
+
+  updated[index] = files[index].url; // Set or replace previews at the given index
+
+  return updated;
+});
+
+    } 
+    
+    
+    
+    
+    else {
       setForm((prev) => ({
         ...prev,
-        image: Array.isArray(fileId) ? fileId[0] : fileId,
+        image:files[0].fileId,
       }));
-      setImagePreview(Array.isArray(url) ? url[0] : url);
+      setImagePreview(files[0].url);
     }
+    
     setIsMediaManagerOpen(false);
   };
 
@@ -280,43 +296,40 @@ setForm((prev) => {
       let imageFileId = form.image;
     
       
-      if (imageFile) {
-        const fileRes = await storage.createFile(
-          process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-          ID.unique(), 
-          imageFile
-        );
-        imageFileId = fileRes.$id;
-      }
+      // if (imageFile) {
+      //   const fileRes = await storage.createFile(
+      //     process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+      //     ID.unique(), 
+      //     imageFile
+      //   );
+      //   imageFileId = fileRes.$id;
+      // }
 
-      let additionalImageIds = [...form.additionalImages];
-      console.log('additionImageid',additionalImageIds);
+      // let additionalImageIds = [...form.additionalImages];
       
-      if (additionalImageFiles.length > 0) {
-        const uploadPromises = additionalImageFiles.map((file) =>
-          storage.createFile(
-            process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-            ID.unique(),
-            file
-          )
-        );
-        const results = await Promise.all(uploadPromises);
-        additionalImageIds = results.map((res) => res.$id);
-        console.log(additionalImageIds);
+      // if (additionalImageFiles.length > 0) {
+      //   const uploadPromises = additionalImageFiles.map((file) =>
+      //     storage.createFile(
+      //       process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+      //       ID.unique(),
+      //       file
+      //     )
+      //   );
+      //   const results = await Promise.all(uploadPromises);
+      //   additionalImageIds = results.map((res) => res.$id);
         
         
-      }
+      // }
 
       const slug = form.name.trim().replace(/\s+/g, "_");
       
       const submissionData = {
         ...form,
         image: imageFileId,
-        additionalImages: additionalImageIds,
+        additionalImages: form.additionalImages,
         slug: slug,
         variants: [],
       };
-      console.log(submissionData);
       
       let data;
       if (initialData?.$id) {
@@ -333,7 +346,6 @@ setForm((prev) => {
 
       // Assert data is an object with $id property
       const productId = (data as { $id: string }).$id;
-      console.log(productId);
       
       const variantIds: string[] = [];
       
@@ -356,7 +368,6 @@ setForm((prev) => {
             additionalImages: String(variantAdditionalImageIds),
           }
         );
-        console.log(variantRes);
         
         variantIds.push(variantRes.$id);
       }
@@ -472,13 +483,13 @@ setForm((prev) => {
   // };
 
   const removeVariantAdditionalImage = (index: number, fileIndex: number) => {
-    // setForm((prev) => {
-    //   const updated = [...prev.variants];
-    //   updated[index].additionalImages = updated[index].additionalImages.filter(
-    //     (_, i) => i !== fileIndex
-    //   );
-    //   return { ...prev, variants: updated };
-    // });
+    setForm((prev) => {
+      const updated = [...prev.variants];
+      updated[index].additionalImages = updated[index].additionalImages?.filter(
+        (_, i) => i !== fileIndex
+      );
+      return { ...prev, variants: updated };
+    });
   };
 
 
@@ -725,7 +736,7 @@ setForm((prev) => {
                     setIsSelectingAdditional(true);
                     setIsSelectingVariant(false);
                     setIsSelectingVariantAdditional(false);
-                    setIsMediaManagerOpen(true);
+                    setIsMediaAdditionalManagerOpen(true);
                   }}
                   className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
                 >
@@ -956,7 +967,7 @@ setForm((prev) => {
                       setVariantImageIndexes({ index });
                       setIsSelectingAdditional(false);
                       setIsSelectingVariant(false);
-                      setIsMediaManagerOpen(true);
+                      setIsMediaAdditionalManagerOpen(true);
                     }}
                     className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded text-muted-foreground hover:bg-muted transition"
                   >
@@ -1005,7 +1016,14 @@ setForm((prev) => {
           // isOpen={isMediaManagerOpen}
           onClose={() => setIsMediaManagerOpen(false)}
           onSelect={handleMediaSelect}
-          // allowMultiple={isSelectingAdditional || isSelectingVariantAdditional}
+        />
+      )}
+      {isMediaAdditionalManagerOpen && (
+        <MediaManager
+          // isOpen={isMediaManagerOpen}
+          onClose={() => setIsMediaAdditionalManagerOpen(false)}
+          onSelect={handleMediaSelect}
+          allowMultiple={true}
         />
       )}
     </div>

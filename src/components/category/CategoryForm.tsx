@@ -81,7 +81,7 @@ const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
       ...prev,
       image: file.fileId,
     }));
-    setPreviewUrl(file.url);
+    setPreviewUrl(file.fileId);
   }
   setIsMediaManagerOpen(false);
 };
@@ -115,6 +115,7 @@ const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
     }
   };
 
+  
   return (
     <form onSubmit={handleSubmit} className="space-y-6 bg-dark-100 p-6 rounded-lg">
       {error && (
@@ -185,7 +186,7 @@ const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
         {previewUrl && (
           <div className="mt-4 relative flex justify-start h-48  rounded-lg overflow-hidden bg-transparent">
             <Image
-              src={(previewUrl)}
+              src={getFilePreview(previewUrl)}
               alt="Preview"
               fill
               className="object-cover w-40 h-40"

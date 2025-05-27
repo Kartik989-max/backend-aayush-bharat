@@ -13,12 +13,25 @@ interface MediaManagerProps {
 }
 
 export  function MediaManager({ onSelect, onClose,allowMultiple=false }: MediaManagerProps) {
+  const [mediaType, setMediaType] = useState<"all" | "image" | "video">("all");
+
   const [files, setFiles] = useState<Models.File[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [tab, setTab] = useState<"browse" | "upload">("browse");
  const itemsPerPage = 12;
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+
+ const filteredFiles = files.filter((f) => {
+  const nameMatches = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const isImage = f.mimeType.startsWith("image/");
+  const isVideo = f.mimeType.startsWith("video/");
+
+  if (mediaType === "image") return nameMatches && isImage;
+  if (mediaType === "video") return nameMatches && isVideo;
+  return nameMatches;
+});
+
 
   const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
@@ -66,9 +79,7 @@ const toggleSelection = (id: string) => {
     onClose();
   };
 
-  const filteredFiles = files.filter((f) =>
-    f.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
@@ -76,7 +87,7 @@ const toggleSelection = (id: string) => {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Media Library</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-black">&times;</button>
+          <button onClick={onClose} className="text-4xl text-gray-500 hover:text-black">&times;</button>
         </div>
 
         {/* Tabs */}
@@ -94,6 +105,11 @@ const toggleSelection = (id: string) => {
             Upload
           </button>
         </div>
+
+
+
+
+
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
@@ -118,6 +134,21 @@ const toggleSelection = (id: string) => {
                 )}
               </div>
 
+
+              <div className="flex gap-2 mb-4">
+  {["all", "image", "video"].map((type) => (
+    <button
+      key={type}
+      className={`px-4 py-1 rounded-full border ${
+        mediaType === type ? "bg-black text-white" : "text-black border-gray-300"
+      }`}
+      onClick={() => setMediaType(type as "all" | "image" | "video")}
+    >
+      {type.charAt(0).toUpperCase() + type.slice(1)}
+    </button>
+  ))}
+</div>
+
               {/* Grid */}
               <div className="grid grid-cols-4 gap-4">
                 {filteredFiles.map((file) => (
@@ -130,14 +161,23 @@ const toggleSelection = (id: string) => {
                     }`}
                     onClick={() => toggleSelection(file.$id)}
                   >
-                    <Image
-                      src={getFilePreview(
-                       file.$id
-                      )}
-                      alt={file.name}
-                      width={500} height={500}
-                      className="object-cover w-full h-full"
-                    />
+                    {file.mimeType.startsWith("video/") ? (
+  <video
+    src={getFilePreview(file.$id)}
+    className="object-cover w-full h-full"
+    preload="metadata"
+    controls
+  />
+) : (
+  <Image
+    src={getFilePreview(file.$id)}
+    alt={file.name}
+    width={500}
+    height={500}
+    className="object-cover w-full h-full"
+  />
+)}
+
                     {selected.includes(file.$id) && (
                       <div className="absolute top-2 right-2 bg-white rounded-full p-1">
                         <svg
@@ -167,7 +207,8 @@ const toggleSelection = (id: string) => {
                 multiple
                 height={500}
                 width={500}
-                accept="image/*"
+               accept="image/*,video/*"
+
                 onChange={async (e) => {
                   const files = e.target.files;
                   if (!files) return;

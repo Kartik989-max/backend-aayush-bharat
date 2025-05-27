@@ -67,11 +67,11 @@ const Sidebar = () => {
     //   href: '/dashboard/blog',
     //   icon: PenSquare,
     // },
-    // {
-    //   name: 'Coupons',
-    //   href: '/dashboard/coupons',
-    //   icon: Ticket,
-    // },
+    {
+      name: 'Coupons',
+      href: '/dashboard/coupons',
+      icon: Ticket,
+    },
     // {
     //   name: 'Top Strip',
     //   href: '/dashboard/top-strip',

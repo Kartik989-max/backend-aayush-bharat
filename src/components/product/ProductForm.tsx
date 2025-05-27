@@ -35,6 +35,7 @@ import { Variants } from "@/types/product";
 interface ProductFormProps {
   initialData: Product | null;
   onSubmit: (data: any) => void;
+  onCancel:()=>void;
 }
 const ProductCreateForm: React.FC<ProductFormProps> = ({
   initialData,
@@ -176,43 +177,6 @@ setForm((prev) => {
       isSelectingVariant && variantImageIndexes.index !== null
     ) {
       
-
-// setForm((prev) => {
-  // const newFileIds = ;
-
-  // const updatedVariants = [...prev.variants];
-  // const targetVariant = updatedVariants[index];
-  
-  // updatedVariants[index] = {
-  //   ...targetVariant,
-  //   additionalImages: [
-  //     ...(Array.isArray(targetVariant.additionalImages)
-  //             ? targetVariant.additionalImages
-  //             : typeof targetVariant.additionalImages === 'string'
-  //             ? String(targetVariant.additionalImages).split(',')
-  //             : []),
-  //           ...newFileIds,
-  //         ], 
-  //       };
-        
-      
-  //       return {
-  //         ...prev,
-  //         variants: updatedVariants,
-  //       };
-  //       });
-
-  //     setVariantImagePreviews((prev) => {
-  //       const updated = [...prev];
-  //       updated[variantImageIndexes.index!] = [
-  //         ...(updated[variantImageIndexes.index!] || []),
-  //         ...(Array.isArray(url) ? url : [url]),
-  //       ];
-  //       return updated;
-  //     });
-  //     setIsSelectingVariant(false);
-  //     setVariantImageIndexes({ index: null });
-
 
 
 

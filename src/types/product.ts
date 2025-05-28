@@ -31,8 +31,8 @@ export interface Product  {
   tags:string[];
   ingredients:string[];
   slug:string;
-  variants:Variants[];
-  collections:Collections[];
+  variants?:Variants[];
+  collections?:Collections[];
   // Make sale_price optional
   // Appwrite document fields are already included from Models.Document:
   // $id, $collectionId, $databaseId, $createdAt, $updatedAt, $permissions

@@ -5,6 +5,8 @@ import './globals.css';
 import '@/styles/quill.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
+import { Provider } from 'react-redux';
+import { store } from '@/store/store';
 
 const mohave = Mohave({ 
   subsets: ['latin'],
@@ -54,7 +56,10 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
-          { children}
+          <Provider store={store}>
+      {children}
+    </Provider>
+
         </AuthProvider>
       </body>
     </html>

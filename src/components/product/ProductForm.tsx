@@ -91,15 +91,40 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     useState(false);
     
 
-  const [variantImagePreviews, setVariantImagePreviews] = useState<string[]>(
-    []
-  );
+  // const [variantImagePreviews, setVariantImagePreviews] = useState<string[]>(
+  //   []
+  // );
   const [variantImageIndexes, setVariantImageIndexes] = useState<{
     index: number | null;
   }>({ index: null });
-  const [variantAdditionalImagePreviews, setVariantAdditionalImagePreviews] =
-    useState<string[][]>([]);
+  // const [variantAdditionalImagePreviews, setVariantAdditionalImagePreviews] =
+  //   useState<string[][]>([]);
 
+
+  const variantImageArr = initialData?.variants?.length
+  ? initialData.variants.map(variant =>
+      variant.image ? getFilePreview(variant.image) : ""
+    )
+  : [];
+
+const variantAdditionalImageArr = initialData?.variants?.length
+  ? initialData.variants.map(variant =>
+      variant.additionalImages
+        ? String(variant.additionalImages)
+            .split(",")
+            .map(str => str.trim())
+            .filter(Boolean)
+            .map(id => getFilePreview(id))
+        : []
+    )
+  : [];
+
+const [variantImagePreviews, setVariantImagePreviews] = useState<string[]>(
+  variantImageArr
+);
+
+const [variantAdditionalImagePreviews, setVariantAdditionalImagePreviews] =
+  useState<string[][]>(variantAdditionalImageArr);
 
 
 
@@ -131,7 +156,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   const variantIdx = variantImageIndexes.index;
 
 setForm((prev) => {
-  const updatedVariants = [...prev.variants];
+  const updatedVariants = [...(prev.variants || [])];
 
   // Ensure current additionalImages is always an array
   let currentImages = updatedVariants[variantIdx].additionalImages;
@@ -158,16 +183,23 @@ setForm((prev) => {
 });
 
 
-  setVariantAdditionalImagePreviews((prev) => {
-    const updated = [...prev];
-    const newUrls = files.map((file)=>file.url);
+ setVariantAdditionalImagePreviews((prev) => {
+  const updated = [...prev];
+  const newUrls = files.map((file) => file.url);
 
-    updated[variantIdx] = [
-      ...(updated[variantIdx] || []),
-      ...newUrls,
-    ];
-    return updated;
-  });
+  // Ensure the array is long enough to safely access variantIdx
+  while (updated.length <= variantIdx) {
+    updated.push([]);
+  }
+
+  updated[variantIdx] = [
+    ...(updated[variantIdx] || []),
+    ...newUrls,
+  ];
+
+  return updated;
+});
+
 
   setIsSelectingVariantAdditional(false);
   setVariantImageIndexes({ index: null });
@@ -183,13 +215,15 @@ setForm((prev) => {
 
   // Update the form with new image IDs for a specific variant
 setForm((prev) => {
+  const updatedVariants = [...(prev.variants || [])];
 
-  const updatedVariants = [...prev.variants];
+  if (variantImageIndexes.index !== null) {
+    updatedVariants[variantImageIndexes.index] = {
+      ...updatedVariants[variantImageIndexes.index],
+      image: files[0].fileId, 
+    };
+  }
 
-  updatedVariants[index] = {
-    ...updatedVariants[index],
-    image: files[index].fileId, // set image to the given fileId
-  };
   return {
     ...prev,
     variants: updatedVariants,
@@ -198,10 +232,10 @@ setForm((prev) => {
 
 // Update the image preview URLs for the same variant
 setVariantImagePreviews((prev) => {
-   const updated = [...prev];
-
-  updated[index] = files[index].url; // Set or replace previews at the given index
-
+  const updated = [...prev];
+  if (variantImageIndexes.index !== null) {
+    updated[variantImageIndexes.index] = files[0].url;
+  }
   return updated;
 });
 
@@ -250,6 +284,9 @@ setVariantImagePreviews((prev) => {
       setImagePreview(URL.createObjectURL(file));
     }
   };
+  
+  
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,49 +297,61 @@ setVariantImagePreviews((prev) => {
       let imageFileId = form.image;
     
       
-      // if (imageFile) {
-      //   const fileRes = await storage.createFile(
-      //     process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-      //     ID.unique(), 
-      //     imageFile
-      //   );
-      //   imageFileId = fileRes.$id;
-      // }
+      if (imageFile) {
+        const fileRes = await storage.createFile(
+          process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+          ID.unique(), 
+          imageFile
+        );
+        imageFileId = fileRes.$id;
+      }
 
-      // let additionalImageIds = [...form.additionalImages];
+      let additionalImageIds = [...form.additionalImages];
       
-      // if (additionalImageFiles.length > 0) {
-      //   const uploadPromises = additionalImageFiles.map((file) =>
-      //     storage.createFile(
-      //       process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-      //       ID.unique(),
-      //       file
-      //     )
-      //   );
-      //   const results = await Promise.all(uploadPromises);
-      //   additionalImageIds = results.map((res) => res.$id);
+      if (additionalImageFiles.length > 0) {
+        const uploadPromises = additionalImageFiles.map((file) =>
+          storage.createFile(
+            process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+            ID.unique(),
+            file
+          )
+        );
+        const results = await Promise.all(uploadPromises);
+        additionalImageIds = results.map((res) => res.$id);
         
         
-      // }
+      }
 
-      const slug = form.name.trim().replace(/\s+/g, "_");
-      
+   const slug = form.name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, "");
+const updatedVariants = form.variants?.map(variant => ({
+  ...variant,
+  additionalImages: Array.isArray(variant.additionalImages)
+    ? variant.additionalImages.join(",")
+    : variant.additionalImages // in case it's already a string or undefined
+}));
+
+
       const submissionData = {
         ...form,
         image: imageFileId,
         additionalImages: form.additionalImages,
         slug: slug,
-        variants: [],
+        variants:updatedVariants,
+        collections:[],
       };
       
       let data;
+      
       if (initialData?.$id) {
         data = await productService.updateProduct(
           initialData.$id,
           submissionData
         );
+        console.log('erroor');
+        
       } else {
         data = await productService.createProduct(submissionData);
+        console.log(data);
       }
 
 
@@ -312,34 +361,55 @@ setVariantImagePreviews((prev) => {
       const productId = (data as { $id: string }).$id;
       
       const variantIds: string[] = [];
+//       if(form.variants?.length!=undefined){
+
+   
+//       for (let i = 0; i < form.variants.length; i++) {
+//         const variant = form.variants[i];   
+//         let variantImageId = (variant.image);
+//         let variantAdditionalImageIds = variant.additionalImages || [];
       
-      for (let i = 0; i < form.variants.length; i++) {
-        const variant = form.variants[i];   
-        let variantImageId = (variant.image);
-        let variantAdditionalImageIds = variant.additionalImages || [];
-      
-        const variantRes = await databases.createDocument(
-          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-          ID.unique(),
-          {
-            price: Number(variant.price),
-            weight: Number(variant.weight), 
-            stock: Number(variant.stock),
-            sale_price: Number(variant.sale_price),
-            productId,
-            image: variantImageId,
-            additionalImages: String(variantAdditionalImageIds),
-          }
-        );
+//         // const variantRes = await databases.createDocument(
+//         //   process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+//         //   process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+//         //   ID.unique(),
+//         //   {
+//         //     price: Number(variant.price),
+//         //     weight: Number(variant.weight), 
+//         //     stock: Number(variant.stock),
+//         //     sale_price: Number(variant.sale_price),
+//         //     productId,
+//         //     image: variantImageId,
+//         //     additionalImages: String(variantAdditionalImageIds),
+//         //   }
+//         // );
+
+//         const variantRes = await databases.createDocument(
+//   process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+//   process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+//   ID.unique(),
+//   {
+//     price: Number(variant.price),
+//     weight: Number(variant.weight),
+//     stock: Number(variant.stock),
+//     sale_price: Number(variant.sale_price),
+//     productId,
+//     image: variantImageId,
+//     additionalImages: variantAdditionalImageIds.join(','), // if storing as comma-separated
+//   }
+// );
+// variantIds.push(variantRes.$id);
+
         
-        variantIds.push(variantRes.$id);
-      }
+//         variantIds.push(variantRes.$id);
+//       }
+//          }
 
       // 6. Update product with variant IDs
       // await productService.updateProduct(productId, {
       //   variants: variantIds,
       // });
+      
 
       onSubmit({ data, variants: variantIds });
     } catch (err: any) {
@@ -380,7 +450,7 @@ setVariantImagePreviews((prev) => {
     setForm((prev) => ({
       ...prev,
       variants: [
-        ...prev.variants,
+        ...prev.variants!,
         {
           productId: "",
 
@@ -406,7 +476,7 @@ setVariantImagePreviews((prev) => {
 
   const removeVariant = (index: number) => {
     setForm((prev) => {
-      const updatedVariants = prev.variants.filter((_, i) => i !== index);
+      const updatedVariants = prev.variants?.filter((_, i) => i !== index);
       return { ...prev, variants: updatedVariants };
     });
   };
@@ -420,7 +490,7 @@ setVariantImagePreviews((prev) => {
         file
       );
       setForm((prev) => {
-        const updatedVariants = [...prev.variants];
+        const updatedVariants = [...prev.variants!];
         updatedVariants[index].image = fileRes.$id;
         return { ...prev, variants: updatedVariants };
       });
@@ -448,7 +518,7 @@ setVariantImagePreviews((prev) => {
 
   const removeVariantAdditionalImage = (index: number, fileIndex: number) => {
     setForm((prev) => {
-      const updated = [...prev.variants];
+      const updated = [...(prev.variants || [])];
       updated[index].additionalImages = updated[index].additionalImages?.filter(
         (_, i) => i !== fileIndex
       );
@@ -456,6 +526,8 @@ setVariantImagePreviews((prev) => {
     });
   };
 
+  console.log(form);
+  
 
   return (
     <div>
@@ -716,7 +788,7 @@ setVariantImagePreviews((prev) => {
         <div className="p-5 bg-white rounded-xl border space-y-5">
           <h2 className="text-lg font-semibold">Variants</h2>
 
-          {form.variants.map((variant, index) => (
+          {form.variants?.map((variant, index) => (
             <div
               key={index}
               className="grid grid-cols-6 gap-4 items-end border p-4 rounded relative bg-gray-50"
@@ -734,7 +806,7 @@ setVariantImagePreviews((prev) => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setForm((prev) => {
-                      const updatedVariants = [...prev.variants];
+                      const updatedVariants = [...prev.variants!];
                       updatedVariants[index] = {
                         ...updatedVariants[index],
                         price: Number(value),
@@ -757,7 +829,7 @@ setVariantImagePreviews((prev) => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setForm((prev) => {
-                      const updatedVariants = [...prev.variants];
+                      const updatedVariants = [...prev.variants!];
                       updatedVariants[index] = {
                         ...updatedVariants[index],
                         weight: Number(value),
@@ -782,7 +854,7 @@ setVariantImagePreviews((prev) => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setForm((prev) => {
-                      const updatedVariants = [...prev.variants];
+                      const updatedVariants = [...(prev.variants || [])];
                       updatedVariants[index] = {
                         ...updatedVariants[index],
                         sale_price: Number(value),
@@ -804,7 +876,7 @@ setVariantImagePreviews((prev) => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setForm((prev) => {
-                      const updatedVariants = [...prev.variants];
+                      const updatedVariants = [...(prev.variants || [])];
                       updatedVariants[index] = {
                         ...updatedVariants[index],
                         stock: Number(value),
@@ -825,7 +897,7 @@ setVariantImagePreviews((prev) => {
                   onChange={(e) => {
                     const value = e.target.value;
                     setForm((prev) => {
-                      const updatedVariants = [...prev.variants];
+                      const updatedVariants = [...(prev.variants || [])];
                       updatedVariants[index] = {
                         ...updatedVariants[index],
                         months: Number(value),
@@ -857,7 +929,7 @@ setVariantImagePreviews((prev) => {
                         className="absolute top-2 right-2 rounded-full w-6 h-6"
                         onClick={() => {
                           setForm((prev) => {
-                            const updatedVariants = [...prev.variants];
+                            const updatedVariants = [...(prev.variants || [])];
                             updatedVariants[index].image = "";
                             return { ...prev, variants: updatedVariants };
                           });

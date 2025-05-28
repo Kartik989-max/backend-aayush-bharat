@@ -57,11 +57,11 @@ const Sidebar = () => {
       href: '/dashboard/collection',
       icon: PenSquare,
     },
-    // {
-    //   name: 'Orders',
-    //   href: '/dashboard/orders',
-    //   icon: ShoppingBag,
-    // },
+    {
+      name: 'Orders',
+      href: '/dashboard/orders',
+      icon: ShoppingBag,
+    },
     // {
     //   name: 'Blog',
     //   href: '/dashboard/blog',

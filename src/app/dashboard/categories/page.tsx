@@ -7,6 +7,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card,CardContent} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+
+  import { useDispatch, useSelector } from 'react-redux';
+import { fetchCategories } from '@/store/slices/categorySlice';
+import { RootState, AppDispatch } from '@/store/store';
+
 interface Category {
   $id: string;
   name: string;
@@ -49,45 +54,54 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }: DeleteModalProp
 };
 
 export default function Categories() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  // const [categories, setCategories] = useState<Category[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const categoriesPerPage = 10;
   const router = useRouter();
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const response = await databases.listDocuments(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!
-      );
-      setCategories(response.documents as unknown as Category[]);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const dispatch = useDispatch<AppDispatch>();
+const { categories, loading } = useSelector((state: RootState) => state.categories);
 
-  const handleDelete = async (categoryId: string) => {
-    try {
-      await databases.deleteDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!,
-        categoryId
-      );
-      await fetchCategories();
-      setDeleteId(null);
-    } catch (error) {
-      console.error('Error deleting category:', error);
-    }
-  };
+useEffect(() => {
+  if (categories.length === 0) {
+    dispatch(fetchCategories());
+  }
+}, [categories, dispatch]);
+  // useEffect(() => {
+  //   fetchCategories();
+  // }, []);
+
+  // const fetchCategories = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await databases.listDocuments(
+  //       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+  //       process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!
+  //     );
+  //     setCategories(response.documents as unknown as Category[]);
+  //   } catch (error) {
+  //     console.error('Error fetching categories:', error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+ const handleDelete = async (categoryId: string) => {
+  try {
+    await databases.deleteDocument(
+      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+      process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!,
+      categoryId
+    );
+    dispatch(fetchCategories()); // re-fetch updated list
+    setDeleteId(null);
+  } catch (error) {
+    console.error('Error deleting category:', error);
+  }
+};
 
   const totalPages = Math.ceil(categories.length / categoriesPerPage);
   const indexOfLastCategory = currentPage * categoriesPerPage;

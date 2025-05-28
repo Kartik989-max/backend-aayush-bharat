@@ -15,8 +15,8 @@ export interface BaseProduct {
   stock: number;
   ingredients: string[];
   slug:string;
-  variants:Variants[];
-  collections:Collections[];
+  variants?:Variants[];
+  collections?:Collections[];
 }
 
 export interface ProductFormData extends BaseProduct {
@@ -122,6 +122,8 @@ export const productService = {
       stock: Number(data.stock),
       ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
       slug: data.slug,
+      variants:data.variants,
+      collections:data.collections
     };
     try {
       return await createDocument(
@@ -149,14 +151,23 @@ export const productService = {
       ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
       slug: data.slug,
       variants:data.variants,
+      collections:data.collections,
     };
+    console.log(productData);
+    
 
+      try{
+
+      
     return await databases.updateDocument(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
       productId,
       productData
     );
+    }catch(error){
+       console.log('error in updating document ',error);
+      }
   },
 
   async getProducts(): Promise<Product[]> {

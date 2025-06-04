@@ -42,7 +42,7 @@
 //     if (!isActive || !text) return null;
 
 //     return (
-//       <div className="bg-gradient-to-r from-spice-900 via-spice-800 to-spice-900 text-white py-2 overflow-hidden rounded-lg">
+//       <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white py-2 overflow-hidden rounded-lg">
 //         <div 
 //           ref={scrollRef}
 //           className="whitespace-nowrap overflow-hidden relative"

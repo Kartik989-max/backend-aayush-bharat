@@ -48,15 +48,13 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     $collectionId: initialData?.$collectionId || "",
     $databaseId: initialData?.$databaseId || "",
     $createdAt: initialData?.$createdAt || "",
-    $updatedAt: initialData?.$updatedAt || "",
-    $permissions: initialData?.$permissions || [],    // Product fields
+    $updatedAt: initialData?.$updatedAt || "",    $permissions: initialData?.$permissions || [],    // Product fields
     name: initialData?.name || "",
     description: initialData?.description || "",
     category: initialData?.category || "",
     tags: initialData?.tags || "",
-    ingredients: initialData?.ingredients || "",
-    slug: initialData?.slug || "",
-    collections: initialData?.collections || []  });  
+    ingredients: initialData?.ingredients || "",    slug: initialData?.slug || "",
+    collections: initialData?.collections || []  });
     // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,17 +87,15 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
         .trim()
         .toLowerCase()
         .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-_]/g, "");
-
-      // Prepare submission data according to the Product interface
+        .replace(/[^a-z0-9-_]/g, "");      // Prepare submission data according to the Product interface
       const submissionData = {
         name: form.name,
         description: form.description,
         category: form.category,
         tags: form.tags,
         ingredients: form.ingredients,
-        slug: slug,
-        collections: form.collections || []      };      
+        slug: slug,        collections: form.collections || []
+      };
       let data: Product;      if (initialData?.$id) {
         data = await productService.updateProduct(initialData.$id, submissionData);
         toast.success("Product updated successfully!");      } else {
@@ -139,7 +135,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
         sale_price: 0,
         stock: 0,
         image: "",
-        additionalImages: ""
+        additionalImages: [] // Initialize as empty array for Appwrite compatibility
       };
       
       const result = await databases.createDocument(
@@ -249,9 +245,9 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
             <h3 className="text-xl font-semibold">Product Variants</h3>
             <p className="text-sm text-gray-500">At least one variant is required for each product</p>
           </div>
-          
-          {/* Just show the variant form without any conditions */}
-          <VariantForm productId={form.$id || initialData?.$id} />
+            {/* Just show the variant form without any conditions */}          <VariantForm 
+            productId={form.$id || initialData?.$id} 
+          />
         </div>
 
         {/* Submit/Cancel Buttons */}

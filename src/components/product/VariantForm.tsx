@@ -11,9 +11,10 @@ import { databases, ID } from '@/lib/appwrite';
 
 interface VariantFormProps {
   productId?: string; // Optional - only used when saving to database later
+  onChange?: (variants: Variants[]) => void; // Add callback for parent to get variant changes
 }
 
-const VariantForm: React.FC<VariantFormProps> = ({ productId }) => {
+const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
   // Simple state for variants with one default variant
   const [variants, setVariants] = useState<Variants[]>([{
     productId: "",
@@ -307,7 +308,10 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId }) => {
       console.error('Error removing additional image:', error);
       toast.error("Failed to remove image");
     }
-  };// Simple UI rendering with loading state
+  };
+  // No more auto-notification of parent - variants are managed independently
+
+  // Simple UI rendering with loading state
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">

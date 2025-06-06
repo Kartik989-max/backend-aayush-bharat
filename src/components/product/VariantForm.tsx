@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Variants } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { MediaManager } from '../media/MediaManager';
 import { getFilePreview } from '@/lib/appwrite';
+import { productService } from '@/services/productService';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { databases, ID, Query } from '@/lib/appwrite';
+import { databases, ID } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 
 interface VariantFormProps {
-  productId?: string; // Optional - only used when saving to database later
-  onChange?: (variants: Variants[]) => void; // Add callback for parent to get variant changes
+  productId?: string;
+  onChange?: (variants: Variants[]) => void;
+  onVariantCreate?: (variantData: Variants) => void;
 }
 
 type VariantUpdateData = {
@@ -25,50 +28,88 @@ type VariantUpdateData = {
   additionalImages: string[];
 };
 
-const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
-  // Simple state for variants with one default variant
+const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVariantCreate }) => {
   const [variants, setVariants] = useState<Variants[]>([{
-    productId: "",
+    productId: productId || "",
     price: 0,
     weight: 0,
     months: 1,
     sale_price: 0,
     stock: 0,
     image: "",
-    additionalImages: [] // Changed to array for Appwrite compatibility
+    additionalImages: []
   }]);
-  
+
+  const [currentVariant, setCurrentVariant] = useState<Variants>({
+    productId: productId || "",
+    price: 0,
+    weight: 0,
+    months: 1,
+    sale_price: 0,
+    stock: 0,
+    image: "",
+    additionalImages: []
+  });
+
   const [loading, setLoading] = useState(false);
   const [variantImageIndexes, setVariantImageIndexes] = useState<{ index: number }>({ index: 0 });
   const [isSelectingVariant, setIsSelectingVariant] = useState(false);
   const [isSelectingVariantAdditional, setIsSelectingVariantAdditional] = useState(false);
-  
-  // Media manager states
   const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
-  const [isMediaAdditionalManagerOpen, setIsMediaAdditionalManagerOpen] = useState(false);
-  
-  // Load variants if productId is provided
+  const [isMediaAdditionalManagerOpen, setIsMediaAdditionalManagerOpen] = useState(false);  // Track whether this is the initial mount
+  const isInitialMount = React.useRef(true);
+  const previousVariants = React.useRef<Variants[]>([]);
+
+  // Notify parent component of variant changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousVariants.current = variants;
+      return;
+    }
+
+    // Check if variants have actually changed
+    const hasChanged = JSON.stringify(previousVariants.current) !== JSON.stringify(variants);
+    if (!hasChanged) {
+      return;
+    }
+
+    previousVariants.current = variants;
+
+    if (onChange) {
+      onChange(variants);
+    }
+  }, [variants, onChange]);
+
   useEffect(() => {
     if (productId) {
       fetchVariants();
     }
   }, [productId]);
-  
+
+  // Optimize variant updates with useCallback
+  const updateVariantState = useCallback((newVariants: Variants[]) => {
+    setVariants(prev => {
+      // Only update if the variants have actually changed
+      if (JSON.stringify(prev) === JSON.stringify(newVariants)) {
+        return prev;
+      }
+      return newVariants;
+    });
+  }, []);
+
   const fetchVariants = async () => {
     if (!productId) return;
-    
+
     try {
       setLoading(true);
       const response = await databases.listDocuments(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-        [
-          Query.equal('productId', productId)
-        ]
+        [Query.equal('productId', productId)]
       );
-      
+
       if (response.documents.length > 0) {
-        // Transform documents to Variants type
         const loadedVariants = response.documents.map(doc => ({
           $id: doc.$id,
           productId: doc.productId,
@@ -80,9 +121,9 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
           image: doc.image || "",
           additionalImages: Array.isArray(doc.additionalImages) ? doc.additionalImages : []
         }));
-        
+
         console.log('Loaded variants:', loadedVariants);
-        setVariants(loadedVariants);
+        updateVariantState(loadedVariants);
       }
     } catch (error: any) {
       console.error('Error fetching variants:', error);
@@ -97,30 +138,27 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
       setLoading(false);
     }
   };
-  // Add a new variant 
+
+  // Add a new variant
   const addVariant = async () => {
-    // Create basic variant structure
     const newVariant: Variants = {
       productId: productId || "",
       price: 0,
       weight: 0,
       months: 1,
-      sale_price: 0, 
+      sale_price: 0,
       stock: 0,
       image: "",
-      additionalImages: [] // Initialize as empty array
+      additionalImages: []
     };
-    
-    // If no productId, just add to local state
+
     if (!productId) {
-      setVariants(prev => [...prev, newVariant]);
+      updateVariantState([...variants, newVariant]);
       return;
     }
-    
-    // If we have a productId, create a variant in the database
+
     try {
       setLoading(true);
-      
       const result = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
@@ -128,24 +166,21 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
         {
           ...newVariant,
           productId: productId,
-          // Ensure numeric fields are stored as numbers
           price: Number(newVariant.price),
           weight: Number(newVariant.weight),
           months: Number(newVariant.months),
           sale_price: Number(newVariant.sale_price),
           stock: Number(newVariant.stock),
-          // Make sure additionalImages is an array
           additionalImages: []
         }
       );
-      
-      // Add the new variant to the local state with its database ID
+
       const newVariantWithId = {
         ...newVariant,
         $id: result.$id,
         productId: productId
       };
-      
+
       setVariants(prev => [...prev, newVariantWithId]);
       toast.success("New variant added");
     } catch (error) {
@@ -155,48 +190,48 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
       setLoading(false);
     }
   };
-  
+
   // Update a variant
   const updateVariant = async (index: number, field: keyof VariantUpdateData, value: any) => {
     const variant = variants[index];
     console.log('Current variant:', variant);
-    
-    const isNumericField = field === 'price' || field === 'weight' || 
-                          field === 'sale_price' || field === 'stock' || 
+
+    const isNumericField = field === 'price' || field === 'weight' ||
+                          field === 'sale_price' || field === 'stock' ||
                           field === 'months';
-    
+
     let newValue = isNumericField ? parseInt(value) || 0 : value;
     if (field === 'months' && (newValue < 1 || !newValue)) newValue = 1;
-    
+
     console.log(`Updating ${field} to:`, newValue);
 
-    // Update the variant in the database if we have an ID
     if (productId && variant.$id) {
       try {
         const updateData: VariantUpdateData = {
           productId: variant.productId,
-          price: Number(variant.price),
-          weight: Number(variant.weight),
-          months: Number(variant.months),
-          sale_price: Number(variant.sale_price),
-          stock: Number(variant.stock),
+          price: Number(variant.price) || 0,
+          weight: Number(variant.weight) || 0,
+          months: Number(variant.months) || 1,
+          sale_price: Number(variant.sale_price) || 0,
+          stock: Number(variant.stock) || 0,
           image: variant.image || "",
-          additionalImages: variant.additionalImages || []
+          additionalImages: Array.isArray(variant.additionalImages) ? variant.additionalImages : []
         };
-        
+
+        // Update the changed field
         if (isNumericField) {
           updateData[field] = Number(newValue);
-        } else if (field === 'additionalImages') {
+        } else if (field === 'additionalImages' && Array.isArray(value)) {
           updateData.additionalImages = value;
         } else if (field === 'image') {
           updateData.image = value;
         } else if (field === 'productId') {
           updateData.productId = value;
         }
-        
+
         console.log('Sending update to database:', updateData);
 
-        const result = await databases.updateDocument(
+        await databases.updateDocument(
           process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
           process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
           variant.$id,
@@ -204,28 +239,42 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
         );
 
         // Update local state
-        const updatedVariants = [...variants];
-        updatedVariants[index] = {
+        const updatedVariant = {
           ...variant,
           ...updateData
         };
-        setVariants(updatedVariants);
 
-        toast.success(`Updated ${field}`);
-      } catch (error) {
+        const updatedVariants = variants.map((v, i) =>
+          i === index ? updatedVariant : v
+        );
+
+        setVariants(updatedVariants);
+        toast.success(`Updated ${field} successfully`);
+      } catch (error: any) {
         console.error('Error updating variant:', error);
-        toast.error(`Failed to update ${field}`);
+        if (!navigator.onLine) {
+          toast.error('No internet connection. Please check your network.');
+        } else if (error?.code === 401) {
+          toast.error('Unauthorized access. Please login again.');
+        } else {
+          toast.error(`Failed to update ${field}. Please try again.`);
+        }
       }
     } else {
       // Just update local state if no database ID
-      const updatedVariants = [...variants];
-      updatedVariants[index] = {
+      const updatedVariant = {
         ...variant,
         [field]: newValue
       };
+
+      const updatedVariants = variants.map((v, i) =>
+        i === index ? updatedVariant : v
+      );
+
       setVariants(updatedVariants);
     }
   };
+
   // Remove a variant
   const removeVariant = async (index: number) => {
     if (variants.length <= 1) {
@@ -234,7 +283,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
     }
 
     const variant = variants[index];
-    
+
     // If no productId or no variant.$id, just remove from UI
     if (!productId || !variant.$id) {
       const updatedVariants = variants.filter((_, i) => i !== index);
@@ -248,7 +297,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
 
     try {
       setLoading(true);
-      
+
       await databases.deleteDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
@@ -258,7 +307,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
       // Update local state
       const updatedVariants = variants.filter((_, i) => i !== index);
       setVariants(updatedVariants);
-      
+
       toast.success("Variant deleted successfully");
     } catch (error) {
       console.error('Error removing variant:', error);
@@ -271,27 +320,24 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
   // Handle media selection
   const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
     if (files.length === 0) return;
-    
+
     const fileId = files[0].fileId;
     const index = variantImageIndexes.index;
-    
+
     if (isSelectingVariant) {
-      // Update main image
       updateVariant(index, 'image', fileId);
       setIsSelectingVariant(false);
     } else if (isSelectingVariantAdditional) {
-      // Update additional images
       const variant = variants[index];
-      const currentImages = Array.isArray(variant.additionalImages) 
-        ? [...variant.additionalImages] 
+      const currentImages = Array.isArray(variant.additionalImages)
+        ? [...variant.additionalImages]
         : [];
-        
+
       currentImages.push(fileId);
-      
       updateVariant(index, 'additionalImages', currentImages);
       setIsSelectingVariantAdditional(false);
     }
-    
+
     setIsMediaManagerOpen(false);
     setIsMediaAdditionalManagerOpen(false);
   };
@@ -299,15 +345,15 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
   // Remove an additional image
   const removeVariantAdditionalImage = async (variantIndex: number, imageIndex: number) => {
     const variant = variants[variantIndex];
-    
+
     // If no productId or no variant.$id, just update in the UI
     if (!productId || !variant.$id) {
-      const currentImages = Array.isArray(variant.additionalImages) 
-        ? [...variant.additionalImages] 
+      const currentImages = Array.isArray(variant.additionalImages)
+        ? [...variant.additionalImages]
         : [];
-        
+
       const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
-      
+
       const updatedVariants = [...variants];
       updatedVariants[variantIndex] = {
         ...variant,
@@ -318,10 +364,10 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
     }
 
     try {
-      const currentImages = Array.isArray(variant.additionalImages) 
-        ? [...variant.additionalImages] 
+      const currentImages = Array.isArray(variant.additionalImages)
+        ? [...variant.additionalImages]
         : [];
-        
+
       const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
 
       await databases.updateDocument(
@@ -338,16 +384,70 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
         additionalImages: updatedImages
       };
       setVariants(updatedVariants);
-      
+
       toast.success("Image removed successfully");
     } catch (error) {
       console.error('Error removing additional image:', error);
       toast.error("Failed to remove image");
     }
   };
-  // No more auto-notification of parent - variants are managed independently
 
-  // Simple UI rendering with loading state
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    console.log(`Variant form input change - ${name}:`, value);
+    
+    setCurrentVariant((prev: Variants) => {
+      const updated = { ...prev, [name]: value };
+      console.log("Updated variant state:", updated);
+      return updated;
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Submitting variant with data:", currentVariant);
+    
+    // Ensure all numeric fields are properly converted
+    const submissionData = {
+      ...currentVariant,
+      price: Number(currentVariant.price),
+      weight: Number(currentVariant.weight),
+      months: Number(currentVariant.months),
+      sale_price: Number(currentVariant.sale_price),
+      stock: Number(currentVariant.stock),
+    };
+
+    console.log("Processed variant submission data:", submissionData);
+    
+    try {
+      const result = await productService.createVariant(submissionData);
+      console.log("Variant creation result:", result);
+      
+      // Clear the form
+      setCurrentVariant({
+        productId: productId || "",
+        price: 0,
+        weight: 0,
+        months: 1,
+        sale_price: 0,
+        stock: 0,
+        image: "",
+        additionalImages: []
+      });
+      
+      // Add to variants list
+      setVariants(prev => [...prev, result]);
+      
+      // Notify parent
+      if (onChange) {
+        onChange([...variants, result]);
+      }
+    } catch (error) {
+      console.error("Error creating variant:", error);
+      toast.error("Failed to create variant");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -355,20 +455,20 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
           <h3 className="text-xl font-semibold">Manage Variants</h3>
           <p className="text-sm text-gray-500 mt-1">Each variant can have its own price, weight, and images</p>
         </div>
-        <Button 
-          type="button" 
+        <Button
+          type="button"
           onClick={addVariant}
           className="bg-green-600 text-white hover:bg-green-700 px-6 py-2 text-base font-medium shadow-md"
         >
           + Add Variant
         </Button>
       </div>
-      
+
       {variants.length === 0 && !loading ? (
         <div className="p-4 border-2 border-dashed border-gray-300 rounded-md text-center">
           <p className="text-gray-500 mb-3">No variants added yet</p>
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             onClick={addVariant}
             className="bg-green-600 text-white hover:bg-green-700 px-4 py-2"
           >
@@ -378,7 +478,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
       ) : (
         <div className="grid gap-6">
           {variants.map((variant, index) => (
-            <Card key={index} className="p-6">
+            <Card key={variant.$id || index} className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-medium">Variant {index + 1}</h3>
                 {variants.length > 1 && (
@@ -392,16 +492,16 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                   </Button>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left column - Images */}
+                {/* Images section */}
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium">Main Image</label>
                     <div className="relative h-40 border rounded-lg overflow-hidden">
                       {variant.image ? (
                         <Image
-                          src={getFilePreview(variant.image) || ''}
+                          src={getFilePreview(variant.image)}
                           alt="Variant"
                           fill
                           className="object-cover"
@@ -412,7 +512,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                         </div>
                       )}
                     </div>
-                    <Button 
+                    <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
@@ -463,12 +563,12 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                   </div>
                 </div>
 
-                {/* Right column - Details */}
+                {/* Details section */}
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium">Price (₹)</label>
-                      <Input 
+                      <Input
                         type="number"
                         value={variant.price}
                         onChange={(e) => updateVariant(index, 'price', e.target.value)}
@@ -478,7 +578,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                     </div>
                     <div>
                       <label className="text-sm font-medium">Sale Price (₹)</label>
-                      <Input 
+                      <Input
                         type="number"
                         value={variant.sale_price}
                         onChange={(e) => updateVariant(index, 'sale_price', e.target.value)}
@@ -488,7 +588,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                     </div>
                     <div>
                       <label className="text-sm font-medium">Weight (grams)</label>
-                      <Input 
+                      <Input
                         type="number"
                         value={variant.weight}
                         onChange={(e) => updateVariant(index, 'weight', e.target.value)}
@@ -498,7 +598,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                     </div>
                     <div>
                       <label className="text-sm font-medium">Duration (months)</label>
-                      <Input 
+                      <Input
                         type="number"
                         value={variant.months}
                         onChange={(e) => updateVariant(index, 'months', e.target.value)}
@@ -508,7 +608,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
                     </div>
                     <div className="col-span-2">
                       <label className="text-sm font-medium">Stock</label>
-                      <Input 
+                      <Input
                         type="number"
                         value={variant.stock}
                         onChange={(e) => updateVariant(index, 'stock', e.target.value)}
@@ -526,8 +626,8 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
 
       {variants.length > 0 && (
         <div className="flex justify-center mt-4">
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             onClick={addVariant}
             className="bg-green-600 text-white hover:bg-green-700 px-4 py-2"
           >
@@ -536,7 +636,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
         </div>
       )}
 
-      {/* Media Manager Modal */}
+      {/* Media Manager Modals */}
       {isMediaManagerOpen && (
         <MediaManager
           onClose={() => setIsMediaManagerOpen(false)}
@@ -544,7 +644,6 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
         />
       )}
 
-      {/* Additional Images Media Manager Modal */}
       {isMediaAdditionalManagerOpen && (
         <MediaManager
           onClose={() => setIsMediaAdditionalManagerOpen(false)}

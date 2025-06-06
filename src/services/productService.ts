@@ -166,16 +166,21 @@ export const productService = {
 
   async createVariant(data: Omit<Variants, '$id'>): Promise<Variants> {
     try {
+      console.log("Received variant data:", data);
+      
+      // Remove any undefined values to prevent defaults from overriding
       const variantData = {
         productId: data.productId,
-        price: Number(data.price) || 0,
-        weight: Number(data.weight) || 0,
-        months: Number(data.months) || 1,
-        sale_price: Number(data.sale_price) || 0,
-        stock: Number(data.stock) || 0,
+        price: data.price !== undefined ? Number(data.price) : 0,
+        weight: data.weight !== undefined ? Number(data.weight) : 0,
+        months: data.months !== undefined ? Number(data.months) : 1,
+        sale_price: data.sale_price !== undefined ? Number(data.sale_price) : 0,
+        stock: data.stock !== undefined ? Number(data.stock) : 0,
         image: data.image || "",
         additionalImages: Array.isArray(data.additionalImages) ? data.additionalImages : []
       };
+
+      console.log("Processed variant data to save:", variantData);
 
       const result = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -184,10 +189,15 @@ export const productService = {
         variantData
       );
 
-      return {
+      console.log("Created variant with result:", result);
+
+      const finalVariant = {
         $id: result.$id,
         ...variantData
       } as Variants;
+
+      console.log("Final variant data:", finalVariant);
+      return finalVariant;
     } catch (error) {
       console.error("Error creating variant:", error);
       throw error;

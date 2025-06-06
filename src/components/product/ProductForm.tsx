@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import type { Product, Variants } from "@/types/product";
 import { productService } from "@/services/productService";
 import {
@@ -24,7 +24,6 @@ import { Badge } from "../ui/badge";
 import { databases } from "@/lib/appwrite";
 import { toast } from "react-toastify";
 import { ID, Query } from "appwrite";
-import "./debug";
 
 interface Category {
   $id: string;
@@ -33,7 +32,7 @@ interface Category {
 
 interface ProductFormProps {
   initialData: Product | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Product) => void;
   onCancel: () => void;
 }
 
@@ -41,26 +40,33 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   initialData,
   onSubmit,
   onCancel,
-}) => {  // Base form state
+}) => {
   const [form, setForm] = useState<Product>({
-    // Appwrite document fields
     $id: initialData?.$id || "",
     $collectionId: initialData?.$collectionId || "",
     $databaseId: initialData?.$databaseId || "",
     $createdAt: initialData?.$createdAt || "",
-    $updatedAt: initialData?.$updatedAt || "",    $permissions: initialData?.$permissions || [],    // Product fields
+    $updatedAt: initialData?.$updatedAt || "",
+    $permissions: initialData?.$permissions || [],
     name: initialData?.name || "",
     description: initialData?.description || "",
     category: initialData?.category || "",
     tags: initialData?.tags || "",
-    ingredients: initialData?.ingredients || "",    slug: initialData?.slug || "",
-    collections: initialData?.collections || []  });
-    // Loading and error states
+    ingredients: initialData?.ingredients || "",
+    slug: initialData?.slug || "",
+    collections: initialData?.collections || [],
+    variants: initialData?.variants || [], // Initialize variants array
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-    useEffect(() => {
+  const [variants, setVariants] = useState<Variants[]>(
+    initialData?.variants || []
+  );
+
+  useEffect(() => {
     const fetchCategories = async () => {
       const cats = await productService.fetchCategories();
       setCategories(cats);
@@ -75,43 +81,132 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
+  const handleVariantChange = useCallback((updatedVariants: Variants[]) => {
+    console.log("New variants received in ProductForm:", updatedVariants);
+
+    setVariants(updatedVariants);
+    console.log("Updated variants state:", updatedVariants);
+  }, []);
+
+  const createDefaultVariant = async (productId: string) => {
+    try {
+      console.log("Creating variant for product ID:", productId);
+
+      // Define numeric values explicitly
+      const variantData: Variants = {
+        productId: productId,
+        price: 0,
+        weight: 0,
+        months: 1,
+        sale_price: 0,
+        stock: 0,
+        image: "",
+        additionalImages: [],
+      };
+
+      console.log("Saving variant data:", variantData);
+
+      // Create variant document
+      const result = await productService.createVariant(variantData);
+
+      console.log("Variant created:", result);
+      return result;
+    } catch (error) {
+      console.error("Error creating variant:", error);
+      throw error;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
+    console.log("Submitting product with data:", form);
+    console.log("Current variants:", variants);
+
     try {
       // Generate slug from name if not provided
-      const slug = form.slug || form.name
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-_]/g, "");      // Prepare submission data according to the Product interface
-      const submissionData = {
+      const slug =
+        form.slug ||
+        form.name
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-_]/g, "");
+
+      // Prepare submission data
+      const submissionData: Omit<
+        Product,
+        | "$id"
+        | "$collectionId"
+        | "$databaseId"
+        | "$createdAt"
+        | "$updatedAt"
+        | "$permissions"
+      > = {
         name: form.name,
         description: form.description,
         category: form.category,
         tags: form.tags,
         ingredients: form.ingredients,
-        slug: slug,        collections: form.collections || []
-      };
-      let data: Product;      if (initialData?.$id) {
-        data = await productService.updateProduct(initialData.$id, submissionData);
-        toast.success("Product updated successfully!");      } else {
+        slug: slug,
+        collections: form.collections,
+        variants: variants.map((v) => ({
+          ...v,
+          price: Number(v.price),
+          weight: Number(v.weight),
+          months: Number(v.months),
+          sale_price: Number(v.sale_price),
+          stock: Number(v.stock),
+        })),
+      };      let data: Product;
+
+      if (initialData?.$id) {
+        data = await productService.updateProduct(
+          initialData.$id,
+          submissionData
+        );
+        toast.success("Product updated successfully!");
+      } else {
+        // First create the product
         data = await productService.createProduct(submissionData);
         console.log("Product created with ID:", data.$id);
-        
+
         // Update form state immediately after creation
-        setForm(prevForm => ({
+        setForm((prevForm) => ({
           ...prevForm,
-          ...data, // Spread all the data properties including $id and other Appwrite fields
+          ...data,
         }));
-          
-        // Create a default variant for the new product
-        await createDefaultVariant(data.$id);
-        
-        toast.success("Product created successfully! You can now manage variants.");
+
+        // Now create all variants with the new product ID
+        console.log("Creating variants for new product...");
+        const variantPromises = variants.map(async (variant) => {
+          const variantData = {
+            ...variant,
+            productId: data.$id,
+            price: Number(variant.price),
+            weight: Number(variant.weight),
+            months: Number(variant.months),
+            sale_price: Number(variant.sale_price),
+            stock: Number(variant.stock)
+          };
+          console.log("Creating variant with data:", variantData);
+          return await productService.createVariant(variantData);
+        });
+
+        const createdVariants = await Promise.all(variantPromises);
+        console.log("Created variants:", createdVariants);
+        data.variants = createdVariants;
+
+        // If no variants were provided, create a default one
+        if (createdVariants.length === 0) {
+          console.log("No variants exist, creating default variant");
+          const defaultVariant = await createDefaultVariant(data.$id);
+          data.variants = [defaultVariant];
+        }
+
+        toast.success("Product created successfully!");
       }
 
       onSubmit(data);
@@ -120,35 +215,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
       setError(errorMessage);
       toast.error(errorMessage);
     }
-
     setLoading(false);
-  };    const createDefaultVariant = async (productId: string) => {
-    try {
-      console.log("Creating variant for product ID:", productId);
-      
-      // Define numeric values explicitly
-      const variantData = {
-        productId: productId,
-        price: 0,
-        weight: 0,
-        months: 1,
-        sale_price: 0,
-        stock: 0,
-        image: "",
-        additionalImages: []
-      };
-      
-      console.log("Saving variant data:", variantData);
-      
-      // Create variant document
-      const result = await productService.createVariant(variantData);
-      
-      console.log("Variant created:", result);
-      return result;
-    } catch (error) {
-      console.error('Error creating variant:', error);
-      throw error;
-    }
   };
 
   return (
@@ -184,7 +251,8 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
                 <label className="mb-2">Category</label>
                 {loadingCategories ? (
                   <div>Loading categories...</div>
-                ) : (                <Select
+                ) : (
+                  <Select
                     value={form.category}
                     onValueChange={(value) =>
                       setForm((prev) => ({ ...prev, category: value }))
@@ -207,7 +275,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
 
               <div>
                 <label>Tags (comma separated)</label>
-                <input
+                <Input
                   name="tags"
                   value={form.tags}
                   onChange={handleChange}
@@ -217,7 +285,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
 
               <div>
                 <label>Ingredients (comma separated)</label>
-                <input
+                <Input
                   name="ingredients"
                   value={form.ingredients}
                   onChange={handleChange}
@@ -227,7 +295,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
 
               <div className="col-span-2">
                 <label>Description</label>
-                <textarea
+                <Textarea
                   name="description"
                   value={form.description}
                   onChange={handleChange}
@@ -235,18 +303,26 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
                   rows={5}
                   required
                 />
-                
               </div>
             </div>
           </div>
-        </div>        {/* Variant Section */}
+        </div>
+
+        {/* Variant Section */}
         <div className="p-5 bg-white rounded-xl border space-y-5">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold">Product Variants</h3>
-            <p className="text-sm text-gray-500">At least one variant is required for each product</p>
+            <p className="text-sm text-gray-500">
+              At least one variant is required for each product
+            </p>
           </div>
-            {/* Just show the variant form without any conditions */}          <VariantForm 
-            productId={form.$id || initialData?.$id} 
+
+          <VariantForm
+            productId={form.$id || initialData?.$id}
+            onChange={(variants) => {
+              console.log("Variants updated:", variants);
+              setVariants(variants);
+            }}
           />
         </div>
 

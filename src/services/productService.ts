@@ -1,31 +1,9 @@
 import { databases, storage, createDocument, ID } from '@/lib/appwrite';
-import { Models } from 'appwrite';
-import { Collections, Variants } from '@/types/product';
-export interface BaseProduct {
-  name: string;
-  description: string;
-  category: string[];
-  weight: number;
-  image: string;
-  additionalImages: string[];
-  sale_price?: number;
-  rating: number;
-  price: number;
-  tags: string[];
-  stock: number;
-  ingredients: string[];
-  slug:string;
-  variants?:Variants[];
-  collections?:Collections[];
-}
+import { Models, Query } from 'appwrite';
+import type { Product, Variants, Collections } from '@/types/product';
 
-export interface ProductFormData extends BaseProduct {
-  $id?: string;
-}
-
-export interface Product extends BaseProduct {
-  $id: string;
-}
+// Re-export types
+export type { Product, Variants, Collections };
 
 export interface Category extends Models.Document {
   name: string;
@@ -38,16 +16,27 @@ export interface Weight extends Models.Document {
 export interface WeightPrice {
   weight: number;
   local_price: number;
-  sale_price?: number | null;  // Make sale_price optional and allow null
+  sale_price?: number | null;
 }
 
-export interface Collection extends Models.Document {
+export interface ProductDocument extends Models.Document {
   name: string;
-  // Remove Collection: string[] since it's not needed
+  description: string;
+  category: string;  // Store as comma-separated string
+  tags: string;      // Store as comma-separated string
+  ingredients: string; // Store as comma-separated string
+  slug: string;
+  variants: string[];  // Array of variant IDs
+  collections: string[]; // Array of collection IDs
 }
+
+// ProductFormData is just like Product but with optional $id
+export type ProductFormData = Omit<Product, '$id'> & {
+  $id?: string;
+};
 
 export const productService = {
-  async fetchCategories() {
+  async fetchCategories(): Promise<Category[]> {
     const response = await databases.listDocuments(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!
@@ -55,7 +44,7 @@ export const productService = {
     return response.documents as unknown as Category[];
   },
 
-  async fetchWeights() {
+  async fetchWeights(): Promise<Weight[]> {
     const response = await databases.listDocuments(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_WEIGHT_COLLECTION_ID!
@@ -63,172 +52,115 @@ export const productService = {
     return response.documents as unknown as Weight[];
   },
 
-  // async fetchCollections() {
-  //   const response = await databases.listDocuments(
-  //     process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-  //     process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_COLLECTION_ID!
-  //   );
-  //   return response.documents as Collection[];  // Fix the type casting
-  // },
-
-  async uploadImage(file: File) {
-    const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
-    if (!bucketId) {
-      throw new Error('Storage bucket ID is not configured');
-    }
-
-    // Check file size before attempting upload
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > 2) {
-      console.warn(`Image file size (${fileSizeMB.toFixed(2)}MB) exceeds recommended limit of 2MB`);
-    }
-
-    try {
-      return await storage.createFile(
-        bucketId,
-        ID.unique(),
-        file
-      );
-    } catch (error: any) {
-      console.error('Failed to upload image:', error);
-      
-      // Provide more specific error messages
-      if (error.message && error.message.includes('Network request failed')) {
-        throw new Error('Network error during upload. This might be due to CORS restrictions or server limits. Contact your administrator.');
-      } else if (error.code === 413 || (error.message && error.message.includes('413'))) {
-        throw new Error('Image is too large. Please try with a smaller image or compress it further.');
-      } else if (error.code === 401 || error.code === 403) {
-        throw new Error('Authentication error. You may need to log in again.');
-      } else if (error.response && error.response.status === 413) {
-        throw new Error('Server rejected the image because it\'s too large. Maximum size is 2MB.');
-      } else {
-        throw new Error('Failed to upload image. Please try again with a smaller image.');
-      }
-    }
-  },
-
-  async createProduct(data: ProductFormData) {
-    const productData = {
-      name: data.name,
-      description: data.description,
-      tags: Array.isArray(data.tags) ? data.tags.join(",") : (data.tags || ""),
-      rating: Number(data.rating),
-      category: Array.isArray(data.category) ? data.category.join(",") : (data.category || ""),
-      weight: Number(data.weight),
-      image: data.image,
-      additionalImages: Array.isArray(data.additionalImages) ? data.additionalImages.join(",") : (data.additionalImages || ""),
-      price: Number(data.price),
-      sale_price: Number(data.sale_price),
-      stock: Number(data.stock),
-      ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
-      slug: data.slug,
-      variants:data.variants,
-      collections:data.collections
-    };
-    try {
-      return await createDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
-        productData
-      );
-    } catch (error) {
-      return error;
-    }
-  },
-
-  async updateProduct(productId: string, data: ProductFormData) {
-    const productData = {
-      name: data.name,
-      description: data.description,
-      tags: Array.isArray(data.tags) ? data.tags.join(",") : (data.tags || ""),
-      rating: Number(data.rating),
-      category: Array.isArray(data.category) ? data.category.join(",") : (data.category || ""),
-      weight: Number(data.weight),
-      image: data.image,
-      additionalImages: Array.isArray(data.additionalImages) ? data.additionalImages.join(",") : (data.additionalImages || ""),
-      price: Number(data.price),
-      sale_price: Number(data.sale_price),
-      stock: Number(data.stock),
-      ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
-      slug: data.slug,
-      variants:data.variants,
-      collections:data.collections,
-    };
-    console.log(productData);
-    
-
-      try{
-
-      
-    return await databases.updateDocument(
-      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-      process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
-      productId,
-      productData
+  async uploadImage(file: File): Promise<string> {
+    const response = await storage.createFile(
+      process.env.NEXT_PUBLIC_APPWRITE_BUCKET_ID!,
+      ID.unique(),
+      file
     );
-    }catch(error){
-       console.log('error in updating document ',error);
-      }
+    return response.$id;
+  },
+
+  async createProduct(data: ProductFormData): Promise<Product> {
+    try {
+      // Create the product
+      const productData = {
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        tags: data.tags,
+        ingredients: data.ingredients,
+        slug: data.slug,
+        collections: data.collections || []
+      };
+
+      const product = await databases.createDocument(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
+        ID.unique(),
+        productData
+      ) as Product;
+
+      return product;
+    } catch (error) {
+      console.error("Error creating product:", error);
+      throw error;
+    }
+  },
+
+  async updateProduct(productId: string, data: ProductFormData): Promise<Product> {
+    try {
+      // Update the product
+      const productData = {
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        tags: data.tags,
+        ingredients: data.ingredients,
+        slug: data.slug,
+        collections: data.collections || []
+      };
+
+      const product = await databases.updateDocument(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
+        productId,
+        productData
+      ) as Product;
+
+      return product;
+    } catch (error) {
+      console.error("Error updating product:", error);
+      throw error;
+    }
   },
 
   async getProducts(): Promise<Product[]> {
-    const response = await databases.listDocuments(
-      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-      process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!
-    );
-
-    return response.documents.map(data => ({
-      $id: data.$id,
-      name: data.name,
-      description: data.description,
-      tags: Array.isArray(data.tags) ? data.tags.join(",") : (data.tags || ""),
-      rating: Number(data.rating),
-      category: Array.isArray(data.category) ? data.category.join(",") : (data.category || ""),
-      weight: Number(data.weight),
-      image: data.image,
-      additionalImages: Array.isArray(data.additionalImages) ? data.additionalImages.join(",") : (data.additionalImages || ""),
-      price: Number(data.price),
-      sale_price: Number(data.sale_price),
-      stock: Number(data.stock),
-      ingredients: Array.isArray(data.ingredients) ? data.ingredients.join(",") : (data.ingredients || ""),
-      slug: data.slug,
-      variants: Array.isArray(data.variants) ? data.variants : [],
-      collections:Array.isArray(data.collections) ? data.collections : [],
-    }));
+    try {
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!
+      );
+      return response.documents as unknown as Product[];
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      throw error;
+    }
   },
 
+  async getProductWithVariants(productId: string): Promise<{product: Product, variants: Variants[]}> {
+    try {
+      // Get product
+      const product = await databases.getDocument(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
+        productId
+      ) as Product;
 
+      // Get variants
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+        [Query.equal('productId', productId)]
+      );
 
+      // Cast documents to Variants
+      const variants = response.documents.map(doc => ({
+        $id: doc.$id,
+        productId: doc.productId,
+        price: Number(doc.price),
+        weight: Number(doc.weight),
+        sale_price: Number(doc.sale_price),
+        stock: Number(doc.stock),
+        months: Number(doc.months),
+        image: doc.image || "",
+        additionalImages: doc.additionalImages || []
+      })) as Variants[];
 
-  async getProductsAndVariant() {
-    const productsRes = await databases.listDocuments(
-      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-      process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
-    );
-
-    const variantsRes = await databases.listDocuments(
-       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-      process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-    );
-
-    // Group variants by productId
-    const variantMap: { [key: string]: any[] } = {};
-    variantsRes.documents.forEach((variant) => {
-      const productId = variant.productId;
-      if (!variantMap[productId]) variantMap[productId] = [];
-      variantMap[productId].push(variant);
-    });
-
-    // Attach variants to corresponding products
-    const combined = productsRes.documents.map((product) => ({
-      ...product,
-      variants: variantMap[product.$id] || [],
-    }));
-
-    return combined;
-}
-
-
-
-
-
+      return { product, variants };
+    } catch (error) {
+      console.error("Error fetching product with variants:", error);
+      throw error;
+    }
+  }
 };

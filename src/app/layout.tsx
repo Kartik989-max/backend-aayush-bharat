@@ -1,6 +1,8 @@
 'use client';
 import type { Metadata } from 'next';
 import { Mohave } from 'next/font/google';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './globals.css';
 import '@/styles/quill.css';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -57,9 +59,9 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <Provider store={store}>
-      {children}
-    </Provider>
-
+            {children}
+            <ToastContainer position="bottom-right" />
+          </Provider>
         </AuthProvider>
       </body>
     </html>

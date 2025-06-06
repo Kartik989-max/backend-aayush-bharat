@@ -6,10 +6,8 @@ import ProductForm from "./ProductForm";
 import Image from "next/image";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
-import type {
-  Product as ProductType,
-  ProductFormData,
-} from "@/services/productService";
+import type { Product as ProductType } from "@/types/product";
+import type { ProductFormData } from "@/services/productService";
 import { Button } from "../ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -152,7 +150,7 @@ const Product = () => {
       if (!product) return;
 
       const updatedImages = product.additionalImages.filter(
-        (id) => id !== imageId
+        (id: string) => id !== imageId
       );
 
       await databases.updateDocument(
@@ -169,8 +167,7 @@ const Product = () => {
       setLoading(false);
     }
   };
-
-  const handleFormSubmit = async (data: ProductFormData) => {
+  const handleFormSubmit = async (data: any) => {
     await fetchProducts();
     setShowForm(false);
     setSelectedProduct(null);
@@ -392,7 +389,7 @@ const Product = () => {
                     </span>
                   </TableCell>
                   <TableCell>₹{product.price}</TableCell>
-                  <TableCell>{product.variants.length || "-"}</TableCell>
+                  <TableCell>{product.variants?.length || "-"}</TableCell>
                   <TableCell>
                     <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                       Active

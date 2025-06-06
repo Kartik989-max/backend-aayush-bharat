@@ -1,14 +1,15 @@
 import { Models } from 'appwrite';
 
 export interface Variants {
-    productId:string;
-  price: number;
-  weight: number;
-  sale_price: number;
-  stock: number;
-  months:number;
-  image?: string;
-  additionalImages?:string[];
+  $id?: string;
+  productId: string; // String type (required)
+  weight: number;    // Integer type (required)
+  price: number;     // Integer type (required)
+  sale_price: number;// Integer type (required)
+  stock: number;     // Integer type (required)
+  image: string;     // String type (required)
+  additionalImages: string[]; // Array of strings for Appwrite compatibility
+  months: number;    // Integer type (required)
 };
 export interface Collections{
   name:string;
@@ -16,24 +17,14 @@ export interface Collections{
   products:Product[];
   $id:string;
 }
-export interface Product  {
-  $id:string,
+export interface Product extends Models.Document {
   name: string;
   description: string;
-  rating:number;
-  category: string[];
-  weight: number;
-  image: string;
-  additionalImages: string[];
-  stock: number;
-  price: number;
-  sale_price?: number;  
-  tags:string[];
-  ingredients:string[];
-  slug:string;
-  variants?:Variants[];
-  collections?:Collections[];
-  // Make sale_price optional
+  category: string;  // Store as comma-separated string
+  tags: string;      // Store as comma-separated string
+  ingredients: string; // Store as comma-separated string
+  slug: string;
+  collections?: Collections[];
   // Appwrite document fields are already included from Models.Document:
   // $id, $collectionId, $databaseId, $createdAt, $updatedAt, $permissions
 }

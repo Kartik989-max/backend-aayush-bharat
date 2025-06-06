@@ -1,161 +1,66 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { storage, uploadFile, getFilePreview, databases } from '@/lib/appwrite';
-import { ID } from 'appwrite';
+import { useState } from 'react';
 import Image from 'next/image';
-import { compressImage } from '@/lib/imageCompression';
-import { Spinner } from '@/components/ui/Spinner'; // Create this component if not exists
 import { Input } from '../ui/input';
 import { MediaManager } from '@/components/media/MediaManager';
 import { Button } from '../ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
+import { Hero } from '@/services/HeroService';
 interface HeroFormProps {
-  onSubmit: (data: any) => void;
-  initialData?: any;
+  onSubmit: (data: Hero) => void;
+  initialData?: Hero;
   onCancel: () => void;
-}
-interface heroForm{
-  videourl:string;
-  mobile_image:string;
-  heroHeading:string;
-  heroSubHeading:string;
-  $id:string;
-  slug:string;
 }
 
 const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
-  const [formData, setFormData] = useState<heroForm>({
-    videourl: initialData?.videourl || '',
+  const [formData, setFormData] = useState<Hero>({
+    heading: initialData?.heading || '',
+    sub_text: initialData?.sub_text || '',
+    image: initialData?.image || '',
+    video: initialData?.video || '',
     mobile_image: initialData?.mobile_image || '',
-    heroHeading: initialData?.heroHeading || "", 
-    heroSubHeading: initialData?.heroSubHeading || "", 
-    $id: initialData?.$id || null,
-    slug:initialData?.slug || ""
+    button1: initialData?.button1 || '',
+    button1_slug: initialData?.button1_slug || '',
+    button2: initialData?.button2 || '',
+    button2_slug: initialData?.button2_slug || '',
   });
-  const [selectedPCFile, setSelectedPCFile] = useState<File | null>(null);
-  const [selectedMobileFile, setSelectedMobileFile] = useState<File | null>(null);
-  const [previewPCUrl, setPreviewPCUrl] = useState<string | null>(initialData?.pc_image || null);
-  const [previewMobileUrl, setPreviewMobileUrl] = useState<string | null>(initialData?.mobile_image || null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionStatus, setCompressionStatus] = useState('');
-  const [showMediaManager, setShowMediaManager] = useState<string | boolean>(false);
-
-  useEffect(() => {
-    if (selectedPCFile) {
-      const url = URL.createObjectURL(selectedPCFile);
-      setPreviewPCUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [selectedPCFile]);
-
-  useEffect(() => {
-    if (selectedMobileFile) {
-      const url = URL.createObjectURL(selectedMobileFile);
-      setPreviewMobileUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [selectedMobileFile]);
-
-  const handleImageUpload = async (file: File) => {
-    try {
-      setIsCompressing(true);
-      setCompressionStatus('Compressing image...');
-      
-      const compressedFile = await compressImage(file);
-      console.log('Original size:', file.size / 1024 / 1024, 'MB');
-      console.log('Compressed size:', compressedFile.size / 1024 / 1024, 'MB');
-      
-      setCompressionStatus('Uploading image...');
-      if (!(compressedFile instanceof File)) {
-        throw new Error('Compression failed: Invalid file format');
+  const [showMediaManager, setShowMediaManager] = useState<'main' | 'mobile' | false>(false);
+  const [mediaType, setMediaType] = useState<'image' | 'video'>(
+    initialData?.video ? 'video' : 'image'
+  );
+  const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
+    const fileUrl = files[0].url;
+    if (showMediaManager === 'main') {
+      // If video is selected, clear image and vice versa
+      if (mediaType === 'video') {
+        setFormData({ ...formData, video: fileUrl, image: '' });
+      } else {
+        setFormData({ ...formData, image: fileUrl, video: '' });
       }
-
-      const uploadResult = await uploadFile(compressedFile);
-      const fileUrl = getFilePreview(uploadResult.$id);
-      
-      setCompressionStatus('');
-      return { fileId: uploadResult.$id, fileUrl };
-    } catch (error: any) {
-      console.error('Image upload failed:', error);
-      setCompressionStatus('');
-      throw new Error(error?.message || 'Failed to upload image');
-    } finally {
-      setIsCompressing(false);
+    } else if (showMediaManager === 'mobile') {
+      setFormData({ ...formData, mobile_image: fileUrl });
     }
-  };
-
-  const handlePCImageSelect = (files: { fileId: string; url: string }[]) => {
-    setFormData({ ...formData, videourl: files[0].url });
-    setPreviewPCUrl(files[0].url);
     setShowMediaManager(false);
   };
-
-  const handleMobileImageSelect = (files: { fileId: string; url: string }[]) => {
-    setFormData({ ...formData, mobile_image: files[0].url });
-    setPreviewMobileUrl(files[0].url);
-    setShowMediaManager(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      let videourl = formData.videourl;
-      let mobileImageUrl = formData.mobile_image;
-
-      if (selectedPCFile) {
-        const { fileUrl } = await handleImageUpload(selectedPCFile);
-        videourl = fileUrl;
+      // Validate required fields
+      if (!formData.heading || !formData.sub_text || !formData.button1 || !formData.button1_slug) {
+        throw new Error('Please fill in all required fields');
       }
-      if (selectedMobileFile) {
-        const { fileUrl } = await handleImageUpload(selectedMobileFile);
-        mobileImageUrl = fileUrl;
+
+      if (!formData.image && !formData.video) {
+        throw new Error('Please upload either an image or video for the hero section');
       }
-      
-      const heroData = {
-        heroHeading: formData.heroHeading,
-        heroSubHeading: formData.heroSubHeading,
-        videourl: videourl,
-        mobile_image: mobileImageUrl,
-        slug:formData.slug,
-      };
 
-      const response = await databases.listDocuments(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_HERO_COLLECTION_ID!
-      );
-
-      // const existingHeroes = response.documents;
-      // const conflictingHero = existingHeroes.find(
-      //   hero => hero.position === formData.position && hero.$id !== formData.$id
-      // );
-
-      if (formData.$id) {
-        // Updating existing hero
-        await databases.updateDocument(
-          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.NEXT_PUBLIC_APPWRITE_HERO_COLLECTION_ID!,
-          formData.$id,
-          heroData
-        );
-
-        // If there's a position conflict, update the conflicting hero's position
-        // if (conflictingHero) {
-        //   const oldPosition = initialData?.position || 0;
-        //   await databases.updateDocument(
-        //     process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        //     process.env.NEXT_PUBLIC_APPWRITE_HERO_COLLECTION_ID!,
-        //     conflictingHero.$id,
-        //     { position: oldPosition }
-        //   );
-        // }
-      }      
-
-      onSubmit(heroData);
+      await onSubmit(formData);
     } catch (error: any) {
       console.error('Form submission failed:', error);
       setError(error?.message || 'Failed to save changes');
@@ -170,126 +75,131 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
           <span className="block sm:inline">{error}</span>
         </div>
-      )}      <div>
-        <label className="block mb-2 text-light-100">Hero Heading</label>
-        <div className="flex items-center">
-        
+      )}      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block mb-2 text-light-100">Heading*</label>
           <Input
             type="text"
-            value={formData.heroHeading}
-            onChange={(e) => setFormData({...formData, heroHeading: e.target.value})}
-            placeholder="e.g. shop, about, contact"
-            className="w-full p-3 rounded-r-lg bg-dark-200 border border-black text-light-100"
+            value={formData.heading}
+            onChange={(e) => setFormData({...formData, heading: e.target.value})}
+            placeholder="Enter hero heading"
+            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block mb-2 text-light-100">Sub Text*</label>
+          <Input
+            type="text"
+            value={formData.sub_text}
+            onChange={(e) => setFormData({...formData, sub_text: e.target.value})}
+            placeholder="Enter subtext"
+            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
+            required
           />
         </div>
       </div>
 
       <div>
-        <label className="block mb-2 text-light-100">Hero Subheading</label>
-        <div className="flex items-center">
+        <label className="block mb-2 text-light-100">Main Media* (Image or Video)</label>
+        <div className="flex items-center gap-4 mb-4">
+          <select
+            value={mediaType}
+            onChange={(e) => setMediaType(e.target.value as 'image' | 'video')}
+            className="p-2 rounded bg-dark-200 text-light-100 border border-dark-300"
+          >
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+          <Button
+            type="button"
+            onClick={() => setShowMediaManager('main')}
+            className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded hover:bg-muted transition"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </div>
+        
+        {formData.video && (
+          <div className="relative h-40 w-full rounded overflow-hidden mb-4">
+            <video src={formData.video} className="w-full h-full object-cover" autoPlay muted loop />
+          </div>
+        )}
+        {formData.image && (
+          <div className="relative h-40 w-full rounded overflow-hidden mb-4">
+            <Image src={formData.image} alt="Hero image" fill className="object-cover" />
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block mb-2 text-light-100">Mobile Image (Optional)</label>
+        <Button
+          type="button"
+          onClick={() => setShowMediaManager('mobile')}
+          className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded hover:bg-muted transition mb-4"
+        >
+          <Plus className="w-6 h-6" />
+        </Button>
+        {formData.mobile_image && (
+          <div className="relative h-40 w-24 rounded overflow-hidden">
+            <Image src={formData.mobile_image} alt="Mobile preview" fill className="object-cover" />
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block mb-2 text-light-100">Button 1 Text*</label>
           <Input
             type="text"
-            
-            value={formData.heroSubHeading}
-            onChange={(e) => setFormData({...formData, heroSubHeading: (e.target.value) || ""})}
+            value={formData.button1}
+            onChange={(e) => setFormData({...formData, button1: e.target.value})}
+            placeholder="Enter button text"
+            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
+            required
+          />
+        </div>
+        <div>
+          <label className="block mb-2 text-light-100">Button 1 Link*</label>
+          <Input
+            type="text"
+            value={formData.button1_slug}
+            onChange={(e) => setFormData({...formData, button1_slug: e.target.value})}
+            placeholder="Enter button link"
+            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block mb-2 text-light-100">Button 2 Text (Optional)</label>
+          <Input
+            type="text"
+            value={formData.button2}
+            onChange={(e) => setFormData({...formData, button2: e.target.value})}
+            placeholder="Enter button text"
+            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
+          />
+        </div>
+        <div>
+          <label className="block mb-2 text-light-100">Button 2 Link (Optional)</label>
+          <Input
+            type="text"
+            value={formData.button2_slug}
+            onChange={(e) => setFormData({...formData, button2_slug: e.target.value})}
+            placeholder="Enter button link"
             className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
           />
         </div>
       </div>
 
-{/* 
-      <div>
-        <label className="block mb-2 text-light-100">Subheading</label>
-        <div className="flex items-center">
-          <input
-            type="text"
-            
-            value={formData.heroSubHeading}
-            onChange={(e) => setFormData({...formData, heroSubHeading: (e.target.value) || ""})}
-            className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
-          />
-        </div>
-        <p className="text-sm text-light-100/50 mt-1">Enter the hero subheading</p>
-      </div> */}
-
-      <div>
-        <label className="block mb-2 text-light-100">Video</label>
-        <div className="flex gap-4">
-          {/* <Button
-            type="button"
-            onClick={() => setShowMediaManager('pc')}
-            className="btn-secondary"
-            disabled={isCompressing || loading}
-          >
-            Choose from Media
-          </Button> */}
-
-          <Button type="button" onClick={() => setShowMediaManager('pc')}
-  className="w-24 h-24 border-2 border-dashed border-muted flex 
-  items-center justify-center rounded text-muted-foreground
-   hover:bg-muted transition mb-4">
-        <Plus className="w-6 h-6" />
-                </Button>
-          {/* <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setSelectedPCFile(e.target.files?.[0] || null)}
-            className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
-            disabled={isCompressing || loading}
-          /> */}
-        </div>
-        {previewPCUrl && (
-          <div className="mt-4 relative h-50  rounded-lg overflow-hidden">
-            <Image
-              src={previewPCUrl}
-              alt="PC Preview"
-              
-              className="object-cover"
-              width={500} height={500}
-            />
-          </div>
-        )}
-      </div>
-
-      <div>
-        <label className="block mb-2 text-light-100">Mobile Image</label>
-        <div className="flex gap-4">
-          {/* <Bs */}
-          {/* <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setSelectedMobileFile(e.target.files?.[0] || null)}
-            className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
-            disabled={isCompressing || loading}
-          /> */}
-          <Button type="button" onClick={() => setShowMediaManager('mobile')}
-  className="w-24 h-24 border-2 border-dashed border-muted flex 
-  items-center justify-center rounded text-muted-foreground
-   hover:bg-muted transition mb-4">
-        <Plus className="w-6 h-6" />
-                </Button>
-        </div>
-        {previewMobileUrl && (
-          <div className="mt-4 relative h-50 rounded-lg overflow-hidden">
-            <Image
-              src={previewMobileUrl}
-              alt="Mobile Preview"
-              width={500} height={500}
-              className="object-cover"
-            />
-          </div>
-        )}
-      </div>
-
-      {showMediaManager === 'pc' && (
+      {showMediaManager && (
         <MediaManager
-          onSelect={handlePCImageSelect}
-          onClose={() => setShowMediaManager(false)}
-        />
-      )}
-      {showMediaManager === 'mobile' && (
-        <MediaManager
-          onSelect={handleMobileImageSelect}
+          onSelect={handleMediaSelect}
           onClose={() => setShowMediaManager(false)}
         />
       )}
@@ -297,25 +207,18 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
       <div className="flex gap-4">
         <Button 
           type="submit" 
-          variant='secondary'
+          variant="secondary"
           className="flex-1 border flex items-center justify-center"
-          disabled={loading || isCompressing}
+          disabled={loading}
         >
-          {(loading || isCompressing) ? (
-            <>
-              <Spinner className="w-5 h-5 mr-2" />
-              {isCompressing ? 'Processing Image...' : 'Saving Changes...'}
-            </>
-          ) : (
-            'Save Changes'
-          )}
+          {loading ? 'Saving...' : initialData ? 'Update Hero' : 'Create Hero'}
         </Button>
         <Button 
-        variant='destructive'
+          variant="destructive"
           type="button" 
           onClick={onCancel}
-          className="btn-secondary flex-1"
-          disabled={loading || isCompressing}
+          className="flex-1"
+          disabled={loading}
         >
           Cancel
         </Button>

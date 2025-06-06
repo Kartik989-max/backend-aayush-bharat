@@ -14,6 +14,7 @@ import {
   PenSquare,
   Ticket,
   ScrollText,
+  Film
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -56,6 +57,11 @@ const Sidebar = () => {
       name: 'Collection',
       href: '/dashboard/collection',
       icon: PenSquare,
+    },
+    {
+      name: 'Reel Manager',
+      href: '/dashboard/reels',
+      icon: Film,
     },
     {
       name: 'Orders',

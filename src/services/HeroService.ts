@@ -62,27 +62,50 @@ export class HeroService {
       console.error('Error deleting hero:', error);
       throw error;
     }
-  }
-  async listHeroes(): Promise<Hero[]> {
+  }  async listHeroes(): Promise<Hero[]> {
     try {
       const response = await databases.listDocuments(
         this.databaseId,
         this.collectionId
       );
-      return response.documents as Hero[];
+      
+      return response.documents.map(doc => ({
+        $id: doc.$id,
+        heading: doc.heading,
+        mobile_image: doc.mobile_image,
+        image: doc.image,
+        video: doc.video,
+        button1: doc.button1,
+        button1_slug: doc.button1_slug,
+        button2: doc.button2,
+        button2_slug: doc.button2_slug,
+        sub_text: doc.sub_text
+      }));
     } catch (error) {
       console.error('Error listing heroes:', error);
       throw error;
     }
   }
-
-  async getHero(heroId: string) {
+  async getHero(heroId: string): Promise<Hero> {
     try {
-      return await databases.getDocument(
+      const doc = await databases.getDocument(
         this.databaseId,
         this.collectionId,
         heroId
       );
+      
+      return {
+        $id: doc.$id,
+        heading: doc.heading,
+        mobile_image: doc.mobile_image,
+        image: doc.image,
+        video: doc.video,
+        button1: doc.button1,
+        button1_slug: doc.button1_slug,
+        button2: doc.button2,
+        button2_slug: doc.button2_slug,
+        sub_text: doc.sub_text
+      };
     } catch (error) {
       console.error('Error getting hero:', error);
       throw error;

@@ -30,12 +30,15 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
   const [showMediaManager, setShowMediaManager] = useState<'main' | 'mobile' | false>(false);
   const [mediaType, setMediaType] = useState<'image' | 'video'>(
     initialData?.video ? 'video' : 'image'
-  );
-  const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
-    const fileUrl = files[0].url;
+  );  const handleMediaSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
+    const file = files[0];
+    const fileUrl = file.url;
+    
     if (showMediaManager === 'main') {
-      // If video is selected, clear image and vice versa
-      if (mediaType === 'video') {
+      // Detect if the file is a video based on mime type or file extension
+      const isVideo = file.mimeType?.startsWith('video/') || fileUrl.match(/\.(mp4|webm|mov)$/i);
+      
+      if (isVideo) {
         setFormData({ ...formData, video: fileUrl, image: '' });
       } else {
         setFormData({ ...formData, image: fileUrl, video: '' });
@@ -99,54 +102,70 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
             required
           />
         </div>
-      </div>
-
-      <div>
+      </div>      <div>
         <label className="block mb-2 text-light-100">Main Media* (Image or Video)</label>
-        <div className="flex items-center gap-4 mb-4">
-          <select
-            value={mediaType}
-            onChange={(e) => setMediaType(e.target.value as 'image' | 'video')}
-            className="p-2 rounded bg-dark-200 text-light-100 border border-dark-300"
-          >
-            <option value="image">Image</option>
-            <option value="video">Video</option>
-          </select>
+        <div className="flex flex-col gap-4">
           <Button
             type="button"
             onClick={() => setShowMediaManager('main')}
-            className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded hover:bg-muted transition"
+            className="w-full h-32 border-2 border-dashed border-muted/50 flex flex-col items-center justify-center rounded-lg hover:bg-muted/10 transition-all group"
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+              Click to upload media (Image or Video)
+            </span>
           </Button>
         </div>
-        
-        {formData.video && (
-          <div className="relative h-40 w-full rounded overflow-hidden mb-4">
-            <video src={formData.video} className="w-full h-full object-cover" autoPlay muted loop />
+          {formData.video && (
+          <div className="relative h-48 w-full rounded-lg overflow-hidden mb-4 shadow-lg transition-all duration-300 ease-in-out opacity-0 animate-fade-in">
+            <video 
+              src={formData.video} 
+              className="w-full h-full object-cover" 
+              autoPlay 
+              muted 
+              loop 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           </div>
         )}
         {formData.image && (
-          <div className="relative h-40 w-full rounded overflow-hidden mb-4">
-            <Image src={formData.image} alt="Hero image" fill className="object-cover" />
+          <div className="relative h-48 w-full rounded-lg overflow-hidden mb-4 shadow-lg transition-all duration-300 ease-in-out opacity-0 animate-fade-in">
+            <Image 
+              src={formData.image} 
+              alt="Hero image" 
+              fill 
+              className="object-cover transition-transform duration-300 hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           </div>
         )}
-      </div>
-
-      <div>
+      </div>      <div>
         <label className="block mb-2 text-light-100">Mobile Image (Optional)</label>
-        <Button
-          type="button"
-          onClick={() => setShowMediaManager('mobile')}
-          className="w-24 h-24 border-2 border-dashed border-muted flex items-center justify-center rounded hover:bg-muted transition mb-4"
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-        {formData.mobile_image && (
-          <div className="relative h-40 w-24 rounded overflow-hidden">
-            <Image src={formData.mobile_image} alt="Mobile preview" fill className="object-cover" />
-          </div>
-        )}
+        <div className="flex flex-col gap-4">
+          <Button
+            type="button"
+            onClick={() => setShowMediaManager('mobile')}
+            className="w-48 h-64 border-2 border-dashed border-muted/50 flex flex-col items-center justify-center rounded-lg hover:bg-muted/10 transition-all group"
+          >
+            <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+            <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors">
+              Click to upload<br />mobile image
+            </span>
+          </Button>
+          {formData.mobile_image && (
+            <div className="relative w-48 h-64 rounded-lg overflow-hidden shadow-lg transition-all duration-300 ease-in-out opacity-0 animate-fade-in">
+              <Image 
+                src={formData.mobile_image} 
+                alt="Mobile preview" 
+                fill 
+                className="object-cover transition-transform duration-300 hover:scale-105" 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6">

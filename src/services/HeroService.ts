@@ -63,14 +63,13 @@ export class HeroService {
       throw error;
     }
   }
-
-  async listHeroes() {
+  async listHeroes(): Promise<Hero[]> {
     try {
       const response = await databases.listDocuments(
         this.databaseId,
         this.collectionId
       );
-      return response.documents;
+      return response.documents as Hero[];
     } catch (error) {
       console.error('Error listing heroes:', error);
       throw error;

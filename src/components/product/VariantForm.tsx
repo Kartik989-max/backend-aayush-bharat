@@ -14,6 +14,17 @@ interface VariantFormProps {
   onChange?: (variants: Variants[]) => void; // Add callback for parent to get variant changes
 }
 
+type VariantUpdateData = {
+  productId: string;
+  price: number;
+  weight: number;
+  months: number;
+  sale_price: number;
+  stock: number;
+  image: string;
+  additionalImages: string[];
+};
+
 const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
   // Simple state for variants with one default variant
   const [variants, setVariants] = useState<Variants[]>([{
@@ -141,53 +152,73 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
   };
   
   // Update a variant
-  const updateVariant = async (index: number, field: keyof Variants, value: any) => {
+  const updateVariant = async (index: number, field: keyof VariantUpdateData, value: any) => {
     const variant = variants[index];
+    console.log('Current variant:', variant);
     
-    // If no productId or no variant.$id, just update in the UI
-    if (!productId || !variant.$id) {
-      const isNumericField = field === 'price' || field === 'weight' || 
-                            field === 'sale_price' || field === 'stock' || 
-                            field === 'months';
-      
-      const updatedVariants = [...variants];
-      updatedVariants[index] = {
-        ...variant,
-        [field]: isNumericField ? Math.floor(Number(value)) : value
-      };
-      setVariants(updatedVariants);
-      return;
-    }
+    const isNumericField = field === 'price' || field === 'weight' || 
+                          field === 'sale_price' || field === 'stock' || 
+                          field === 'months';
+    
+    let newValue = isNumericField ? parseInt(value) || 0 : value;
+    if (field === 'months' && (newValue < 1 || !newValue)) newValue = 1;
+    
+    console.log(`Updating ${field} to:`, newValue);
 
-    try {
-      // Convert numeric fields to numbers
-      const isNumericField = field === 'price' || field === 'weight' || 
-                            field === 'sale_price' || field === 'stock' || 
-                            field === 'months';
-      
-      const updateData = {
-        [field]: isNumericField ? Math.floor(Number(value)) : value
-      };
-      
-      await databases.updateDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-        variant.$id,
-        updateData
-      );
-      
-      // Update local state
+    // Update the variant in the database if we have an ID
+    if (productId && variant.$id) {
+      try {
+        const updateData: VariantUpdateData = {
+          productId: variant.productId,
+          price: Number(variant.price),
+          weight: Number(variant.weight),
+          months: Number(variant.months),
+          sale_price: Number(variant.sale_price),
+          stock: Number(variant.stock),
+          image: variant.image || "",
+          additionalImages: variant.additionalImages || []
+        };
+        
+        if (isNumericField) {
+          updateData[field] = Number(newValue);
+        } else if (field === 'additionalImages') {
+          updateData.additionalImages = value;
+        } else if (field === 'image') {
+          updateData.image = value;
+        } else if (field === 'productId') {
+          updateData.productId = value;
+        }
+        
+        console.log('Sending update to database:', updateData);
+
+        const result = await databases.updateDocument(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+          variant.$id,
+          updateData
+        );
+
+        // Update local state
+        const updatedVariants = [...variants];
+        updatedVariants[index] = {
+          ...variant,
+          ...updateData
+        };
+        setVariants(updatedVariants);
+
+        toast.success(`Updated ${field}`);
+      } catch (error) {
+        console.error('Error updating variant:', error);
+        toast.error(`Failed to update ${field}`);
+      }
+    } else {
+      // Just update local state if no database ID
       const updatedVariants = [...variants];
       updatedVariants[index] = {
         ...variant,
-        [field]: isNumericField ? Math.floor(Number(value)) : value
+        [field]: newValue
       };
       setVariants(updatedVariants);
-      
-      toast.success(`Updated ${field} successfully`);
-    } catch (error) {
-      console.error('Error updating variant:', error);
-      toast.error(`Failed to update ${field}`);
     }
   };
   // Remove a variant

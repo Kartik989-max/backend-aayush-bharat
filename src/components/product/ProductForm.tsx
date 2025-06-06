@@ -124,10 +124,10 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     setLoading(false);
   };    const createDefaultVariant = async (productId: string) => {
     try {
-      console.log("Creating default variant for product ID:", productId);
+      console.log("Creating variant for product ID:", productId);
       
-      // Default variant with all required fields
-      const defaultVariant = {
+      // Define numeric values explicitly
+      const variantData = {
         productId: productId,
         price: 0,
         weight: 0,
@@ -135,19 +135,19 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
         sale_price: 0,
         stock: 0,
         image: "",
-        additionalImages: [] // Initialize as empty array for Appwrite compatibility
+        additionalImages: []
       };
       
-      const result = await databases.createDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-        ID.unique(),
-        defaultVariant
-      );
+      console.log("Saving variant data:", variantData);
       
-      console.log("Default variant created with ID:", result.$id);
+      // Create variant document
+      const result = await productService.createVariant(variantData);
+      
+      console.log("Variant created:", result);
+      return result;
     } catch (error) {
-      console.error('Error creating default variant:', error);
+      console.error('Error creating variant:', error);
+      throw error;
     }
   };
 

@@ -162,5 +162,35 @@ export const productService = {
       console.error("Error fetching product with variants:", error);
       throw error;
     }
-  }
+  },
+
+  async createVariant(data: Omit<Variants, '$id'>): Promise<Variants> {
+    try {
+      const variantData = {
+        productId: data.productId,
+        price: Number(data.price) || 0,
+        weight: Number(data.weight) || 0,
+        months: Number(data.months) || 1,
+        sale_price: Number(data.sale_price) || 0,
+        stock: Number(data.stock) || 0,
+        image: data.image || "",
+        additionalImages: Array.isArray(data.additionalImages) ? data.additionalImages : []
+      };
+
+      const result = await databases.createDocument(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+        ID.unique(),
+        variantData
+      );
+
+      return {
+        $id: result.$id,
+        ...variantData
+      } as Variants;
+    } catch (error) {
+      console.error("Error creating variant:", error);
+      throw error;
+    }
+  },
 };

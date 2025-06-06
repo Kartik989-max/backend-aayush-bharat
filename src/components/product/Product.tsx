@@ -99,12 +99,12 @@ const Product = () => {
   useEffect(() => {
     fetchProducts();
   }, [currentPage]);
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const offset = (currentPage - 1) * productsPerPage;
 
+      // First get all products
       const response = await databases.listDocuments(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
@@ -115,8 +115,45 @@ const Product = () => {
         ]
       );
 
+      // For each product, fetch its variants
+      const productsWithVariants = await Promise.all(
+        response.documents.map(async (product) => {
+          const variantsResponse = await databases.listDocuments(
+            process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+            process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+            [Query.equal('productId', product.$id)]
+          );
+
+          const variants = variantsResponse.documents.map(doc => ({
+            $id: doc.$id,
+            productId: doc.productId,
+            price: Number(doc.price) || 0,
+            weight: Number(doc.weight) || 0,
+            sale_price: Number(doc.sale_price) || 0,
+            stock: Number(doc.stock) || 0,
+            months: Number(doc.months) || 1,
+            image: doc.image || "",
+            additionalImages: Array.isArray(doc.additionalImages) ? doc.additionalImages : []
+          }));
+
+          return {
+            ...product,
+            variants,
+            // Get total stock across all variants
+            totalStock: variants.reduce((sum, v) => sum + (v.stock || 0), 0),
+            // Get price range
+            minPrice: Math.min(...variants.map(v => v.price || 0)),
+            maxPrice: Math.max(...variants.map(v => v.price || 0)),
+            // Get min sale price if any variant has it
+            minSalePrice: Math.min(...variants.filter(v => v.sale_price > 0).map(v => v.sale_price)),
+            // Get the first variant's image if product has no image
+            displayImage: product.image || (variants[0]?.image || "")
+          };
+        })
+      );
+
       setTotalDocuments(response.total);
-      setProducts(response.documents as unknown as ProductType[]);
+      setProducts(productsWithVariants as unknown as ProductType[]);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -360,10 +397,9 @@ const Product = () => {
                   className={`hover:bg-gray-50 ${
                     product.stock < 1 ? "bg-red-50" : ""
                   }`}
-                >
-                  <TableCell>
+                >                  <TableCell>
                     <img
-                      src={getImageUrl(product.image)}
+                      src={getImageUrl(product.displayImage)}
                       alt={product.name}
                       className="w-10 h-10 object-cover rounded"
                     />
@@ -374,22 +410,33 @@ const Product = () => {
                   <TableCell className="text-gray-600">
                     {product.category}
                   </TableCell>
-                  <TableCell>-</TableCell>
+                  <TableCell>
+                    {product.minSalePrice > 0 && (
+                      <span className="text-green-600 font-medium">
+                        ₹{product.minSalePrice}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        product.stock < 10
+                        product.totalStock < 10
                           ? "bg-red-100 text-red-800"
                           : "bg-green-100 text-green-800"
                       }`}
                     >
-                      {product.stock < 1
+                      {product.totalStock < 1
                         ? "Out of Stock"
-                        : `In Stock (${product.stock})`}
+                        : `In Stock (${product.totalStock})`}
                     </span>
                   </TableCell>
-                  <TableCell>₹{product.price}</TableCell>
-                  <TableCell>{product.variants?.length || "-"}</TableCell>
+                  <TableCell>
+                    {product.minPrice === product.maxPrice 
+                      ? `₹${product.minPrice}`
+                      : `₹${product.minPrice} - ₹${product.maxPrice}`
+                    }
+                  </TableCell>
+                  <TableCell>{product.variants?.length || 0} variants</TableCell>
                   <TableCell>
                     <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                       Active

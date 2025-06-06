@@ -17,7 +17,8 @@ const checkInternetConnection = () => {
 
 const client = new Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
+    .setSelfSigned(true); // Enable this for dev environment
 
 const databases = new Databases(client);
 const storage = new Storage(client);
@@ -152,6 +153,24 @@ const getImageUrlForNextJS = (fileId: string) => {
         console.error('Error generating image URL:', error);
         return '/images/placeholder.jpg';
     }
+};
+
+// Add this function to handle network errors
+const handleNetworkError = async <T>(operation: () => Promise<T>): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error: any) {
+    if (!navigator.onLine) {
+      throw new NetworkError('No internet connection');
+    }
+    if (error?.code === 401) {
+      throw new Error('Unauthorized access');
+    }
+    if (error?.response?.message) {
+      throw new Error(error.response.message);
+    }
+    throw error;
+  }
 };
 
 export { 

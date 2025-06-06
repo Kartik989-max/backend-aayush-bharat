@@ -7,7 +7,7 @@ import { MediaManager } from '../media/MediaManager';
 import { getFilePreview } from '@/lib/appwrite';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { databases, ID } from '@/lib/appwrite';
+import { databases, ID, Query } from '@/lib/appwrite';
 
 interface VariantFormProps {
   productId?: string; // Optional - only used when saving to database later
@@ -59,10 +59,12 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
     
     try {
       setLoading(true);
-        const response = await databases.listDocuments(
+      const response = await databases.listDocuments(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-        [`productId=${productId}`]
+        [
+          Query.equal('productId', productId)
+        ]
       );
       
       if (response.documents.length > 0) {
@@ -70,24 +72,27 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange }) => {
         const loadedVariants = response.documents.map(doc => ({
           $id: doc.$id,
           productId: doc.productId,
-          price: Number(doc.price),
-          weight: Number(doc.weight),
-          sale_price: Number(doc.sale_price),
-          stock: Number(doc.stock),
-          months: Number(doc.months),
+          price: Number(doc.price) || 0,
+          weight: Number(doc.weight) || 0,
+          sale_price: Number(doc.sale_price) || 0,
+          stock: Number(doc.stock) || 0,
+          months: Number(doc.months) || 1,
           image: doc.image || "",
-          // Convert string to array if needed
-          additionalImages: doc.additionalImages 
-            ? (Array.isArray(doc.additionalImages) 
-              ? doc.additionalImages 
-              : doc.additionalImages.split(',').filter(Boolean))
-            : []
+          additionalImages: Array.isArray(doc.additionalImages) ? doc.additionalImages : []
         }));
         
+        console.log('Loaded variants:', loadedVariants);
         setVariants(loadedVariants);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching variants:', error);
+      if (error?.code === 401) {
+        toast.error('Unauthorized access. Please login again.');
+      } else if (!navigator.onLine) {
+        toast.error('No internet connection. Please check your network.');
+      } else {
+        toast.error('Failed to fetch variants. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

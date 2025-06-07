@@ -7,14 +7,18 @@ import { ID } from "appwrite";
 import Image from "next/image";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { Dialog } from "../ui/dialog";
+import { Card, CardContent } from "../ui/card";
+import { cn } from "@/lib/utils";
 
 interface MediaManagerProps {
   onSelect: (files: { fileId: string; url: string }[]) => void;
   onClose: () => void;
   allowMultiple?: boolean;
+  open: boolean;
 }
 
-export function MediaManager({ onSelect, onClose, allowMultiple = false }: MediaManagerProps) {
+export function MediaManager({ onSelect, onClose, allowMultiple = false, open }: MediaManagerProps) {
   const [mediaType, setMediaType] = useState<"all" | "image" | "video">("all");
   const [files, setFiles] = useState<Models.File[]>([]);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -81,28 +85,26 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false }: Media
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-      <div className="bg-white w-[90%] max-w-4xl max-h-[90vh] rounded-lg overflow-hidden shadow-lg flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Media Library</h2>
-          <button onClick={onClose} className="text-4xl text-gray-500 hover:text-black">&times;</button>
-        </div>
-
+    <Dialog open={open} onClose={onClose} title="Media Library">
+      <div className="flex flex-col h-full">
         {/* Tabs */}
-        <div className="flex border-b">
-          <button
-            className={`py-2 px-4 ${tab === "browse" ? "border-b-2 border-black font-semibold" : "text-gray-500"}`}
+        <div className="flex border-b border-gray-200">
+          <Button
+            variant={tab === "browse" ? "default" : "ghost"}
             onClick={() => setTab("browse")}
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+            data-state={tab === "browse" ? "active" : "inactive"}
           >
             Browse
-          </button>
-          <button
-            className={`py-2 px-4 ${tab === "upload" ? "border-b-2 border-black font-semibold" : "text-gray-500"}`}
+          </Button>
+          <Button
+            variant={tab === "upload" ? "default" : "ghost"}
             onClick={() => setTab("upload")}
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+            data-state={tab === "upload" ? "active" : "inactive"}
           >
             Upload
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -111,85 +113,85 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false }: Media
             <>
               {/* Search and Delete */}
               <div className="flex items-center justify-between mb-4">
-                <input
+                <Input
                   type="text"
                   placeholder="Search media..."
-                  className="border p-2 rounded w-1/2"
+                  className="w-1/2"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 {selected.length > 0 && (
-                  <button
+                  <Button
                     onClick={handleDelete}
-                    className="border px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                    variant="destructive"
                   >
                     Delete Selected
-                  </button>
+                  </Button>
                 )}
               </div>
 
               {/* Media Type Filter */}
               <div className="flex gap-2 mb-4">
                 {["all", "image", "video"].map((type) => (
-                  <button
+                  <Button
                     key={type}
-                    className={`px-4 py-1 rounded-full border ${
-                      mediaType === type ? "bg-black text-white" : "text-black border-gray-300"
-                    }`}
+                    variant={mediaType === type ? "default" : "outline"}
                     onClick={() => setMediaType(type as "all" | "image" | "video")}
+                    className="rounded-full"
                   >
                     {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
               {/* File Grid */}
               <div className="grid grid-cols-4 gap-4">
                 {filteredFiles.map((file) => (
-                  <div
+                  <Card
                     key={file.$id}
-                    className={`relative cursor-pointer border-2 rounded-lg overflow-hidden group aspect-square ${
-                      selected.includes(file.$id)
-                        ? "border-blue-500 ring-2 ring-blue-300"
-                        : "border-transparent hover:border-blue-300"
-                    }`}
+                    className={cn(
+                      "cursor-pointer overflow-hidden group aspect-square",
+                      selected.includes(file.$id) && "ring-2 ring-primary"
+                    )}
                     onClick={() => toggleSelection(file.$id)}
                   >
-                    {file.mimeType.startsWith("video/") ? (
-                      <video
-                        src={getFilePreview(file.$id)}
-                        className="object-cover w-full h-full"
-                        preload="metadata"
-                        controls
-                      />
-                    ) : (
-                      <Image
-                        src={getFilePreview(file.$id)}
-                        alt={file.name}
-                        width={500}
-                        height={500}
-                        className="object-cover w-full h-full"
-                      />
-                    )}
+                    <CardContent className="p-0 relative h-full">
+                      {file.mimeType.startsWith("video/") ? (
+                        <video
+                          src={getFilePreview(file.$id)}
+                          className="object-cover w-full h-full"
+                          preload="metadata"
+                          controls
+                        />
+                      ) : (
+                        <Image
+                          src={getFilePreview(file.$id)}
+                          alt={file.name}
+                          width={500}
+                          height={500}
+                          className="object-cover w-full h-full"
+                        />
+                      )}
 
-                    {selected.includes(file.$id) && (
-                      <div className="absolute top-2 right-2 bg-white rounded-full p-1">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 text-blue-500"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                    <p className="text-center text-sm mt-1 truncate">{file.name}</p>
-                  </div>
+                      {selected.includes(file.$id) && (
+                        <div className="absolute top-2 right-2 bg-white rounded-full p-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-primary"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                      <p className="text-center text-sm mt-1 truncate p-2">{file.name}</p>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
 
@@ -198,7 +200,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false }: Media
                 <Button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-1 text-black border shadow-md"
+                  variant="outline"
                 >
                   Prev
                 </Button>
@@ -208,7 +210,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false }: Media
                 <Button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-4 text-black border shadow-md py-1"
+                  variant="outline"
                 >
                   Next
                 </Button>
@@ -241,19 +243,18 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false }: Media
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t flex justify-between items-center">
-          <Button onClick={onClose} className="text-gray-700 hover:underline">
+        <div className="p-4 border-t border-gray-200 flex justify-between items-center">
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
             disabled={selected.length === 0}
           >
             Select ({selected.length})
           </Button>
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 }

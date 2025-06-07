@@ -20,6 +20,7 @@ interface VariantFormProps {
   variants?: Variants[];
   onChange?: (variants: Variants[]) => void;
   onVariantCreate?: (variantData: Variants) => void;
+  disabled?: boolean;
 }
 
 type VariantUpdateData = {
@@ -39,7 +40,8 @@ const VariantForm: React.FC<VariantFormProps> = ({
   productId, 
   variants: initialVariants = [], 
   onChange, 
-  onVariantCreate 
+  onVariantCreate,
+  disabled = false
 }) => {
   const [variants, setVariants] = useState<Variants[]>(() => {
     if (initialVariants.length > 0) {
@@ -517,6 +519,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
                       min="0"
                       step="0.01"
+                      disabled={disabled}
                     />
                   </div>
                   <div className="space-y-2">
@@ -527,6 +530,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       onChange={(e) => handleVariantChange(index, 'sale_price', e.target.value)}
                       min="0"
                       step="0.01"
+                      disabled={disabled}
                     />
                   </div>
                   <div className="space-y-2">
@@ -537,6 +541,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}
                       min="0"
                       step="0.01"
+                      disabled={disabled}
                     />
                   </div>
                   <div className="space-y-2">
@@ -546,6 +551,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       value={variant.stock}
                       onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
                       min="0"
+                      disabled={disabled}
                     />
                   </div>
                   <div className="space-y-2">
@@ -555,6 +561,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       value={variant.months}
                       onChange={(e) => handleVariantChange(index, 'months', e.target.value)}
                       min="1"
+                      disabled={disabled}
                     />
                   </div>
                   <div className="space-y-2">
@@ -579,12 +586,16 @@ const VariantForm: React.FC<VariantFormProps> = ({
                         </div>
                       )}
                       <Button
+                        type="button"
                         variant="outline"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setCurrentVariantIndex(index);
                           setIsAdditionalImages(false);
                           setShowMediaManager(true);
                         }}
+                        disabled={disabled}
                       >
                         <ImageIcon className="h-4 w-4 mr-2" />
                         {variant.image ? "Change Image" : "Add Image"}
@@ -604,22 +615,32 @@ const VariantForm: React.FC<VariantFormProps> = ({
                             className="object-cover rounded-md"
                           />
                           <Button
+                            type="button"
                             variant="destructive"
                             size="icon"
                             className="absolute -top-2 -right-2 h-6 w-6"
-                            onClick={() => handleRemoveAdditionalImage(index, imageId)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemoveAdditionalImage(index, imageId);
+                            }}
+                            disabled={disabled}
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                       <Button
+                        type="button"
                         variant="outline"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setCurrentVariantIndex(index);
                           setIsAdditionalImages(true);
                           setShowMediaManager(true);
                         }}
+                        disabled={disabled}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Image
@@ -633,7 +654,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                     variant="destructive"
                     size="sm"
                     onClick={() => handleRemoveVariant(index)}
-                    disabled={variants.length === 1}
+                    disabled={disabled}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Remove Variant
@@ -646,7 +667,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
           <Button
             onClick={handleAddVariant}
             className="w-full"
-            disabled={loading}
+            disabled={disabled}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Variant
@@ -658,12 +679,14 @@ const VariantForm: React.FC<VariantFormProps> = ({
           onClose={() => setShowMediaManager(false)}
           title="Select Image"
         >
-          <MediaManager
-            onSelect={handleImageSelect}
-            onClose={() => setShowMediaManager(false)}
-            allowMultiple={isAdditionalImages}
-            open={showMediaManager}
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <MediaManager
+              onSelect={handleImageSelect}
+              onClose={() => setShowMediaManager(false)}
+              allowMultiple={isAdditionalImages}
+              open={showMediaManager}
+            />
+          </div>
         </Dialog>
       </CardContent>
     </Card>

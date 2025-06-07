@@ -15,6 +15,13 @@ import VariantForm from './VariantForm';
 import { MediaManager } from '../media/MediaManager';
 import { Dialog } from '../ui/dialog';
 import { createDocument, getFilePreview } from '@/lib/appwrite';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface Category {
   $id: string;
@@ -53,9 +60,10 @@ interface ProductFormProps {
   initialData?: Product | null;
   onSubmit: (data: Product) => void;
   onCancel: () => void;
+  loading?: boolean;
 }
 
-export default function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
+export default function ProductForm({ initialData, onSubmit, onCancel, loading = false }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -71,11 +79,11 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
     productVideo: initialData?.productVideo || []
   });
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [showMediaManager, setShowMediaManager] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -83,6 +91,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
 
   const fetchData = async () => {
     try {
+      setIsLoadingData(true);
       const [cats, cols] = await Promise.all([
         productService.fetchCategories(),
         productService.fetchCollections()
@@ -92,19 +101,21 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load data');
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: ProductFormData) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
   const handleVariantChange = (variants: Variant[]) => {
-    setFormData((prev: ProductFormData) => ({
+    setFormData(prev => ({
       ...prev,
       variants
     }));
@@ -113,7 +124,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
   const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
     if (files.length === 0) return;
     
-    setFormData((prev: ProductFormData) => ({
+    setFormData(prev => ({
       ...prev,
       productVideo: [...(prev.productVideo || []), ...files.map(f => f.fileId)]
     }));
@@ -121,7 +132,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
   };
 
   const handleRemoveVideo = (videoId: string) => {
-    setFormData((prev: ProductFormData) => ({
+    setFormData(prev => ({
       ...prev,
       productVideo: prev.productVideo?.filter(id => id !== videoId) || []
     }));
@@ -129,7 +140,6 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
     try {
@@ -204,15 +214,20 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
       };
 
       onSubmit(product);
-      toast.success(initialData ? 'Product updated successfully' : 'Product created successfully');
     } catch (error: any) {
       console.error('Form submission failed:', error);
       setError(error?.message || 'Failed to save product');
       toast.error('Failed to save product');
-    } finally {
-      setLoading(false);
     }
   };
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -232,44 +247,48 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
             value={formData.name}
             onChange={handleInputChange}
             required
+            disabled={loading}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <select
-            id="category"
-            name="category"
+          <Select
             value={formData.category}
-            onChange={handleInputChange}
-            className="w-full rounded-md border border-input bg-background px-3 py-2"
-            required
+            onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+            disabled={loading}
           >
-            <option value="">Select a category</option>
-            {categories.map((category) => (
-              <option key={category.$id} value={category.name}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category.$id} value={category.name}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="collections">Collection</Label>
-          <select
-            id="collections"
-            name="collections"
+          <Select
             value={formData.collections[0] || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, collections: [e.target.value] }))}
-            className="w-full rounded-md border border-input bg-background px-3 py-2"
+            onValueChange={(value) => setFormData(prev => ({ ...prev, collections: [value] }))}
+            disabled={loading}
           >
-            <option value="">Select a collection</option>
-            {collections.map((collection) => (
-              <option key={collection.$id} value={collection.$id}>
-                {collection.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a collection" />
+            </SelectTrigger>
+            <SelectContent>
+              {collections.map((collection) => (
+                <SelectItem key={collection.$id} value={collection.$id}>
+                  {collection.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -280,6 +299,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
             value={formData.tags}
             onChange={handleInputChange}
             placeholder="Enter tags separated by commas"
+            disabled={loading}
           />
         </div>
 
@@ -292,6 +312,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
             onChange={handleInputChange}
             placeholder="product-name"
             required
+            disabled={loading}
           />
         </div>
       </div>
@@ -305,6 +326,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
           onChange={handleInputChange}
           rows={4}
           required
+          disabled={loading}
         />
       </div>
 
@@ -317,6 +339,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
           onChange={handleInputChange}
           rows={4}
           placeholder="Enter ingredients separated by commas"
+          disabled={loading}
         />
       </div>
 
@@ -327,7 +350,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
             {formData.productVideo?.map((videoId) => (
               <div key={videoId} className="relative aspect-video">
                 <video
-                  src={(videoId)}
+                  src={getFilePreview(videoId)}
                   className="w-full h-full object-cover rounded-md"
                   controls
                 />
@@ -336,6 +359,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
                   size="icon"
                   className="absolute -top-2 -right-2 h-6 w-6"
                   onClick={() => handleRemoveVideo(videoId)}
+                  disabled={loading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -343,9 +367,15 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
             ))}
           </div>
           <Button
+            type="button"
             variant="outline"
-            onClick={() => setShowMediaManager(true)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowMediaManager(true);
+            }}
             className="mt-4"
+            disabled={loading}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Videos
@@ -360,6 +390,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
             variants={formData.variants}
             onChange={handleVariantChange}
             productId={initialData?.$id}
+            disabled={loading}
           />
         </CardContent>
       </Card>
@@ -370,7 +401,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
           className="flex-1"
           disabled={loading}
         >
-          {loading ? 'Saving...' : 'Save Product'}
+          {loading ? 'Saving...' : initialData ? 'Update Product' : 'Create Product'}
         </Button>
         <Button 
           type="button" 
@@ -388,12 +419,14 @@ export default function ProductForm({ initialData, onSubmit, onCancel }: Product
         onClose={() => setShowMediaManager(false)}
         title="Select Videos"
       >
-        <MediaManager
-          onSelect={handleMediaSelect}
-          onClose={() => setShowMediaManager(false)}
-          allowMultiple={true}
-          open={showMediaManager}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <MediaManager
+            onSelect={handleMediaSelect}
+            onClose={() => setShowMediaManager(false)}
+            allowMultiple={true}
+            open={showMediaManager}
+          />
+        </div>
       </Dialog>
     </form>
   );

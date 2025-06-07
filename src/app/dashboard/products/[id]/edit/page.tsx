@@ -14,6 +14,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -23,22 +24,26 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       } catch (error) {
         console.error('Error fetching product:', error);
         toast.error('Failed to load product');
+        router.push('/dashboard/products');
       } finally {
         setLoading(false);
       }
     };
 
     fetchProduct();
-  }, [params.id]);
+  }, [params.id, router]);
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (formData: Product) => {
     try {
+      setSaving(true);
       await productService.updateProduct(params.id, formData);
       toast.success('Product updated successfully');
       router.push('/dashboard/products');
     } catch (error) {
       console.error('Error updating product:', error);
       toast.error('Failed to update product');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -69,7 +74,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => router.push('/dashboard/products')}>
+        <Button 
+          variant="outline" 
+          onClick={() => router.push('/dashboard/products')}
+          disabled={saving}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
@@ -82,6 +91,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             initialData={product}
             onSubmit={handleSubmit}
             onCancel={() => router.push('/dashboard/products')}
+            loading={saving}
           />
         </CardContent>
       </Card>

@@ -5,9 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { OrderType } from '@/types/order';
 import { orderService } from '@/services/orderService';
 import { ArrowLeft } from 'lucide-react';
-import { createShiprocketOrder, generateShiprocketLabel } from '@/lib/shiprocket';
-import ShippingCalculator from '@/components/ShippingCalculator';
-import { calculateTotalWeight } from '@/utils/shiprocket';
+
 
 const statusOptions = [
   'pending',
@@ -17,23 +15,12 @@ const statusOptions = [
   'cancelled'
 ];
 
-interface ShiprocketResponse {
-  shiprocket_order_id: string;
-  shiprocket_shipment_id: string;
-  tracking_id: string;
-  label_url?: string;
-  manifest_url?: string;
-}
-
 export default function OrderDetailsPage() {
   const { orderId } = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<OrderType | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRate, setSelectedRate] = useState<any>(null);
-  const [shippingRates, setShippingRates] = useState<any[]>([]);
 
   useEffect(() => {
     loadOrder();
@@ -64,72 +51,6 @@ export default function OrderDetailsPage() {
       setSaving(false);
     }
   };
-
-  const handleShippingRateCalculated = (rates: any[]) => {
-    setShippingRates(rates);
-  };
-
-  const handleShippingRateSelected = (rate: any) => {
-    setSelectedRate(rate);
-  };
-
-  const handleCreateShipment = async () => {
-    if (!order || order.status === 'cancelled' || !selectedRate) return;
-
-    try {
-        setError(null);
-        setSaving(true);
-
-        // Calculate total weight from weights array
-        const totalWeight = calculateTotalWeight(order.weights || []);
-
-        // Create Shiprocket order with selected rate and dimensions
-        const shipmentData = await createShiprocketOrder({
-            ...order,
-            courier_id: selectedRate.courier_company_id,
-            weight: totalWeight
-        });
-
-        console.log('Shipment created:', shipmentData);
-
-        if (shipmentData.shiprocket_order_id) {
-            // Update order with initial Shiprocket details
-            await orderService.updateOrder(order.$id, {
-                shipping_status: 'processing',
-                shiprocket_order_id: shipmentData.shiprocket_order_id,
-                shiprocket_shipment_id: shipmentData.shiprocket_shipment_id,
-                tracking_id: shipmentData.tracking_id
-            });
-
-            // Reload order to get updated data
-            await loadOrder();
-
-            // Generate label and manifest if we have a shipment ID
-            if (shipmentData.shiprocket_shipment_id) {
-                const labelData = await generateShiprocketLabel(shipmentData.shiprocket_shipment_id);
-                console.log('Label generated:', labelData);
-
-                if (labelData.label_url || labelData.manifest_url) {
-                    // Update order with label/manifest URLs
-                    await orderService.updateOrder(order.$id, {
-                        shipping_status: 'shipped',
-                        label_url: labelData.label_url,
-                        manifest_url: labelData.manifest_url
-                    });
-                    
-                    await loadOrder(); // Reload order again with label URLs
-                }
-            }
-        } else {
-            throw new Error('Failed to create Shiprocket order - no order ID returned');
-        }
-    } catch (error: any) {
-        console.error('Error creating shipment:', error);
-        setError(error.message || 'Failed to create shipment');
-    } finally {
-        setSaving(false);
-    }
-};
 
   if (loading) {
     return (
@@ -229,7 +150,7 @@ export default function OrderDetailsPage() {
             </div>
           </div>
 
-          {/* Combined Shipping Status Section */}
+          {/* Shipping Status Section */}
           <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6 md:col-span-2">
             <div className="grid md:grid-cols-2 gap-6">
               {/* Current Status Display */}
@@ -264,86 +185,6 @@ export default function OrderDetailsPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Shipping Calculator and Actions */}
-          <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6 md:col-span-2">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Shipping Calculator */}
-              <div>
-                <h2 className="text-xl font-semibold text-light-100 mb-4">Shipping Calculator</h2>
-                <ShippingCalculator
-                  order={order}
-                  onCalculate={handleShippingRateCalculated}
-                  onSelectRate={handleShippingRateSelected}
-                />
-              </div>
-
-              {/* Shipping Actions */}
-              <div>
-                <h2 className="text-xl font-semibold text-light-100 mb-4">Shipping Actions</h2>
-                {error && (
-                  <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                    {error}
-                  </div>
-                )}
-                {selectedRate && (
-                  <div className="mb-4 p-4 bg-dark-300 rounded">
-                    <h3 className="font-semibold text-light-100 mb-2">Selected Rate:</h3>
-                    <p className="text-light-100">Courier: {selectedRate.courier_name}</p>
-                    <p className="text-light-100">Rate: ₹{selectedRate.rate}</p>
-                  </div>
-                )}
-                <button
-                  onClick={handleCreateShipment}
-                  disabled={!!(saving || order.status === 'cancelled' || order.shiprocket_order_id || !selectedRate)}
-                  className={`w-full px-4 py-2 rounded font-semibold transition-colors ${
-                    !selectedRate
-                      ? 'bg-dark-300 text-light-100/50 cursor-not-allowed'
-                      : 'bg-primary text-white hover:bg-primary/80'
-                  }`}
-                >
-                  {saving ? 'Creating Shipment...' : 'Create Shipment'}
-                </button>
-                {!selectedRate && (
-                  <p className="text-light-100/70 text-sm mt-2">
-                    Please calculate and select a shipping rate first
-                  </p>
-                )}
-
-                {/* Shipping Documents Section */}
-                {order.shiprocket_order_id && (
-                  <div className="mt-4 space-y-3">
-                    <h3 className="font-semibold text-light-100">Shipping Documents</h3>
-                    {order.label_url && (
-                      <a 
-                        href={order.label_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="block w-full px-4 py-2 text-center bg-dark-300 text-light-100 hover:bg-dark-400 rounded transition-colors"
-                      >
-                        Download Shipping Label
-                      </a>
-                    )}
-                    {order.manifest_url && (
-                      <a 
-                        href={order.manifest_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="block w-full px-4 py-2 text-center bg-dark-300 text-light-100 hover:bg-dark-400 rounded transition-colors"
-                      >
-                        Download Manifest
-                      </a>
-                    )}
-                    {saving && (
-                      <div className="text-light-100/70 text-sm text-center">
-                        Generating shipping documents...
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>

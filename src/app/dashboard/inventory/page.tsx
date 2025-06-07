@@ -1,9 +1,10 @@
 "use client";
-import React from "react";
-import { useEffect, useState } from "react";
-import { MediaManager } from "@/components/media/MediaManager";
-import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { ID } from "appwrite";
+import { databases, getFilePreview } from "@/lib/appwrite";
+import { productService } from "@/services/productService";
 import {
   Table,
   TableBody,
@@ -12,17 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  ReloadIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-} from "@radix-ui/react-icons";
-import { productService } from "@/services/productService";
-import { databases, getFilePreview } from "@/lib/appwrite"; // appwrite client
-import { ID } from "appwrite";
-import Image from "next/image";
+import { Input } from "@/components/ui/input";
+import { ChevronDownIcon, ChevronRightIcon, Plus } from "lucide-react";
+import { Product } from "@/types/product";
+import { MediaManager } from "@/components/media/MediaManager";
 
 export default function InventoryPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -81,8 +76,35 @@ export default function InventoryPage() {
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const res = await productService.getProductsAndVariant();
-      const docs = res.map((doc: any) => ({
+      // First fetch all products
+      const products = await productService.getProducts();
+      
+      // For each product, fetch variants
+      const productsWithVariants = await Promise.all(
+        products.map(async (product) => {
+          try {
+            const { variants } = await productService.getProductWithVariants(product.$id);
+            return {
+              ...product,
+              variants,
+              // Calculate total stock across all variants
+              stock: variants.reduce((sum, variant) => sum + (variant.stock || 0), 0),
+              // Get min price from variants
+              price: Math.min(...variants.map(variant => variant.price || 0))
+            };
+          } catch (error) {
+            console.error(`Error fetching variants for product ${product.$id}:`, error);
+            return {
+              ...product,
+              variants: [],
+              stock: 0,
+              price: 0
+            };
+          }
+        })
+      );
+
+      const docs = productsWithVariants.map((doc) => ({
         ...doc,
         status:
           doc.stock === 0
@@ -91,6 +113,7 @@ export default function InventoryPage() {
             ? "Low Stock"
             : "In Stock",
       }));
+
       setItems(docs);
     } catch (err) {
       console.error("Error fetching inventory:", err);

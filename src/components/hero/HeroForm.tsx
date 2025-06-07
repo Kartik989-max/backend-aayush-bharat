@@ -1,11 +1,13 @@
 'use client';
+
 import { useState } from 'react';
 import Image from 'next/image';
-import { Input } from '../ui/input';
-import { MediaManager } from '@/components/media/MediaManager';
-import { Button } from '../ui/button';
-import { Plus, Loader2 } from 'lucide-react';
-import { Hero } from '@/services/HeroService';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Plus, Loader2 } from "lucide-react";
+import { MediaManager } from '../media/MediaManager';
+import type { Hero } from '@/services/HeroService';
+
 interface HeroFormProps {
   onSubmit: (data: Hero) => void;
   initialData?: Hero;
@@ -28,9 +30,8 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMediaManager, setShowMediaManager] = useState<'main' | 'mobile' | false>(false);
-  const [mediaType, setMediaType] = useState<'image' | 'video'>(
-    initialData?.video ? 'video' : 'image'
-  );  const handleMediaSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
+
+  const handleMediaSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
     const file = files[0];
     const fileUrl = file.url;
     
@@ -48,6 +49,7 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
     }
     setShowMediaManager(false);
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -73,146 +75,174 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-dark-100 p-6 rounded-lg">
+    <form onSubmit={handleSubmit} className="space-y-8 p-6">
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
           <span className="block sm:inline">{error}</span>
         </div>
-      )}      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block mb-2 text-light-100">Heading*</label>
-          <Input
-            type="text"
-            value={formData.heading}
-            onChange={(e) => setFormData({...formData, heading: e.target.value})}
-            placeholder="Enter hero heading"
-            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
-            required
-          />
+      )}
+
+      <div className="grid grid-cols-2 gap-8">
+        {/* Left Column */}
+        <div className="space-y-6">
+          <div>
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Main Media*
+            </label>
+            <p className="text-[0.8rem] text-muted-foreground mb-4">
+              Upload an image or video for the hero section
+            </p>
+            <Button
+              type="button"
+              onClick={() => setShowMediaManager('main')}
+              variant="outline"
+              className="w-full h-32 border-dashed group relative overflow-hidden"
+            >
+              {formData.video ? (
+                <video
+                  src={formData.video}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                />
+              ) : formData.image ? (
+                <Image
+                  src={formData.image}
+                  alt="Hero image"
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center">
+                  <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                    Upload media
+                  </span>
+                </div>
+              )}
+            </Button>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium leading-none">Mobile Image (Optional)</label>
+            <p className="text-[0.8rem] text-muted-foreground mb-4">
+              Upload a specific image for mobile devices
+            </p>
+            <Button
+              type="button"
+              onClick={() => setShowMediaManager('mobile')}
+              variant="outline"
+              className="w-48 h-64 border-dashed group relative overflow-hidden"
+            >
+              {formData.mobile_image ? (
+                <Image
+                  src={formData.mobile_image}
+                  alt="Mobile preview"
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center">
+                  <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors">
+                    Upload mobile image
+                  </span>
+                </div>
+              )}
+            </Button>
+          </div>
         </div>
 
-        <div>
-          <label className="block mb-2 text-light-100">Sub Text*</label>
-          <Input
-            type="text"
-            value={formData.sub_text}
-            onChange={(e) => setFormData({...formData, sub_text: e.target.value})}
-            placeholder="Enter subtext"
-            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
-            required
-          />
-        </div>
-      </div>      <div>
-        <label className="block mb-2 text-light-100">Main Media* (Image or Video)</label>
-        <div className="flex flex-col gap-4">
-          <Button
-            type="button"
-            onClick={() => setShowMediaManager('main')}
-            className="w-full h-32 border-2 border-dashed border-muted/50 flex flex-col items-center justify-center rounded-lg hover:bg-muted/10 transition-all group"
-          >
-            <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-            <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
-              Click to upload media (Image or Video)
-            </span>
-          </Button>
-        </div>
-          {formData.video && (
-          <div className="relative h-48 w-full rounded-lg overflow-hidden mb-4 shadow-lg transition-all duration-300 ease-in-out opacity-0 animate-fade-in">
-            <video 
-              src={formData.video} 
-              className="w-full h-full object-cover" 
-              autoPlay 
-              muted 
-              loop 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          </div>
-        )}
-        {formData.image && (
-          <div className="relative h-48 w-full rounded-lg overflow-hidden mb-4 shadow-lg transition-all duration-300 ease-in-out opacity-0 animate-fade-in">
-            <Image 
-              src={formData.image} 
-              alt="Hero image" 
-              fill 
-              className="object-cover transition-transform duration-300 hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          </div>
-        )}
-      </div>      <div>
-        <label className="block mb-2 text-light-100">Mobile Image (Optional)</label>
-        <div className="flex flex-col gap-4">
-          <Button
-            type="button"
-            onClick={() => setShowMediaManager('mobile')}
-            className="w-48 h-64 border-2 border-dashed border-muted/50 flex flex-col items-center justify-center rounded-lg hover:bg-muted/10 transition-all group"
-          >
-            <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-            <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors">
-              Click to upload<br />mobile image
-            </span>
-          </Button>
-          {formData.mobile_image && (
-            <div className="relative w-48 h-64 rounded-lg overflow-hidden shadow-lg transition-all duration-300 ease-in-out opacity-0 animate-fade-in">
-              <Image 
-                src={formData.mobile_image} 
-                alt="Mobile preview" 
-                fill 
-                className="object-cover transition-transform duration-300 hover:scale-105" 
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        {/* Right Column */}
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="heading" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Heading*
+              </label>
+              <Input
+                id="heading"
+                value={formData.heading}
+                onChange={(e) => setFormData({...formData, heading: e.target.value})}
+                placeholder="Enter hero heading"
+                required
+                className="mt-2"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             </div>
-          )}
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block mb-2 text-light-100">Button 1 Text*</label>
-          <Input
-            type="text"
-            value={formData.button1}
-            onChange={(e) => setFormData({...formData, button1: e.target.value})}
-            placeholder="Enter button text"
-            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
-            required
-          />
-        </div>
-        <div>
-          <label className="block mb-2 text-light-100">Button 1 Link*</label>
-          <Input
-            type="text"
-            value={formData.button1_slug}
-            onChange={(e) => setFormData({...formData, button1_slug: e.target.value})}
-            placeholder="Enter button link"
-            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
-            required
-          />
-        </div>
-      </div>
+            <div>
+              <label htmlFor="subtext" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Sub Text*
+              </label>
+              <Input
+                id="subtext"
+                value={formData.sub_text}
+                onChange={(e) => setFormData({...formData, sub_text: e.target.value})}
+                placeholder="Enter subtext"
+                required
+                className="mt-2"
+              />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block mb-2 text-light-100">Button 2 Text (Optional)</label>
-          <Input
-            type="text"
-            value={formData.button2}
-            onChange={(e) => setFormData({...formData, button2: e.target.value})}
-            placeholder="Enter button text"
-            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
-          />
-        </div>
-        <div>
-          <label className="block mb-2 text-light-100">Button 2 Link (Optional)</label>
-          <Input
-            type="text"
-            value={formData.button2_slug}
-            onChange={(e) => setFormData({...formData, button2_slug: e.target.value})}
-            placeholder="Enter button link"
-            className="w-full p-3 rounded-lg bg-dark-200 border border-black text-light-100"
-          />
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="button1" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Button 1 Text*
+                </label>
+                <Input
+                  id="button1"
+                  value={formData.button1}
+                  onChange={(e) => setFormData({...formData, button1: e.target.value})}
+                  placeholder="Enter button text"
+                  required
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="button1_slug" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Button 1 Link*
+                </label>
+                <Input
+                  id="button1_slug"
+                  value={formData.button1_slug}
+                  onChange={(e) => setFormData({...formData, button1_slug: e.target.value})}
+                  placeholder="Enter button link"
+                  required
+                  className="mt-2"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="button2" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Button 2 Text
+                </label>
+                <Input
+                  id="button2"
+                  value={formData.button2}
+                  onChange={(e) => setFormData({...formData, button2: e.target.value})}
+                  placeholder="Enter button text (optional)"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <label htmlFor="button2_slug" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Button 2 Link
+                </label>
+                <Input
+                  id="button2_slug"
+                  value={formData.button2_slug}
+                  onChange={(e) => setFormData({...formData, button2_slug: e.target.value})}
+                  placeholder="Enter button link (optional)"
+                  className="mt-2"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -223,23 +253,28 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
         />
       )}
 
-      <div className="flex gap-4">
-        <Button 
-          type="submit" 
-          variant="secondary"
-          className="flex-1 border flex items-center justify-center"
-          disabled={loading}
-        >
-          {loading ? 'Saving...' : initialData ? 'Update Hero' : 'Create Hero'}
-        </Button>
-        <Button 
-          variant="destructive"
-          type="button" 
+      <div className="flex items-center justify-end gap-4">
+        <Button
+          type="button"
+          variant="ghost"
           onClick={onCancel}
-          className="flex-1"
           disabled={loading}
         >
           Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="min-w-[120px]"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>{initialData ? 'Update' : 'Create'} Hero</>
+          )}
         </Button>
       </div>
     </form>

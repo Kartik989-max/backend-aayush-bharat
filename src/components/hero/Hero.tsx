@@ -1,46 +1,40 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import HeroForm from "./HeroForm";
-import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "../ui/button";
 import { HeroService, Hero as HeroType } from "@/services/HeroService";
+import HeroForm from "./HeroForm";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog } from "@/components/ui/dialog";
+import Image from "next/image";
+import { Pencil, Trash2, Loader2, ArrowLeft } from "lucide-react";
+
 interface DeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }
 
-const DeleteConfirmationModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-}: DeleteModalProps) => {
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }: DeleteModalProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-dark-100 p-6 rounded-lg max-w-md w-full mx-4">
-        <h2 className="text-xl font-bold text-light-100 mb-4">
-          Confirm Delete
-        </h2>
-        <p className="text-light-100/70 mb-6">
-          Are you sure you want to delete this hero section? This action cannot
-          be undone.
+    <Dialog open={isOpen} onClose={onClose} title="Confirm Delete">
+      <div className="space-y-4">
+        <p className="text-light-100/70">
+          Are you sure you want to delete this hero section? This action cannot be undone.
         </p>
         <div className="flex gap-4">
-          <Button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
-          >
+          <Button variant="destructive" className="flex-1" onClick={onConfirm}>
+            <Trash2 className="w-4 h-4 mr-2" />
             Delete
           </Button>
-          <Button onClick={onClose} className="flex-1" variant="secondary">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 };
 
@@ -51,6 +45,7 @@ const Hero = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const heroService = new HeroService();
 
   useEffect(() => {
@@ -72,6 +67,7 @@ const Hero = () => {
 
   const handleFormSubmit = async (data: HeroType) => {
     try {
+      setSavingId(editingId || 'new');
       if (editingId) {
         await heroService.updateHero(editingId, data);
       } else {
@@ -82,18 +78,23 @@ const Hero = () => {
       setIsAddingNew(false);
     } catch (error: any) {
       setError(error?.message || "Failed to save hero");
+    } finally {
+      setSavingId(null);
     }
   };
 
   const handleDelete = async (heroId: string) => {
     try {
       setError(null);
+      setSavingId(heroId);
       await heroService.deleteHero(heroId);
       await fetchHeroData();
       setDeleteId(null);
     } catch (error: any) {
       console.error("Failed to delete hero:", error);
       setError(error?.message || "Failed to delete hero");
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -103,47 +104,46 @@ const Hero = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="relative inline-flex">
-          <div className="w-12 h-12 bg-primary rounded-full opacity-75 animate-ping"></div>
-          <div className="w-12 h-12 bg-primary rounded-full absolute inset-0 animate-pulse"></div>
-        </div>
-        <div className="text-xl font-semibold text-primary animate-pulse">
-          Loading Hero...
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-xl font-medium text-primary">Loading hero sections...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-8">
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+        <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded-lg">
           <span className="block sm:inline">{error}</span>
         </div>
       )}
 
-      <div className="flex justify-between items-center my-8">
-        <h1 className="text-3xl text-primary font-bold">Hero Section Manager</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-primary">Hero Section Manager</h1>
         {(isAddingNew || editingId) ? (
-          <Button
-            onClick={() => {setIsAddingNew(false);setEditingId(null)}}
-            className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
+          <Button 
+            variant="outline" 
+            onClick={() => {setIsAddingNew(false); setEditingId(null)}}
+            className="gap-2"
           >
-            Back to Hero
+            <ArrowLeft className="w-4 h-4" />
+            Back to Heroes
           </Button>
         ) : (
-          <Button
-            onClick={() => setIsAddingNew(true)}
-            className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
+          <Button 
+            onClick={() => setIsAddingNew(true)} 
+            variant="default"
           >
-            Add Hero
+            Add Hero Section
           </Button>
         )}
       </div>
 
       {isAddingNew && (
-        <div className="mb-8">
+        <div className="bg-dark-200/50 rounded-lg border border-border/50 shadow-sm">
           <HeroForm
             onSubmit={handleFormSubmit}
             onCancel={() => setIsAddingNew(false)}
@@ -152,7 +152,7 @@ const Hero = () => {
       )}
 
       {editingId && (
-        <div className="mb-8">
+        <div className="bg-dark-200/50 rounded-lg border border-border/50 shadow-sm">
           <HeroForm
             onSubmit={handleFormSubmit}
             initialData={heroes.find((hero) => hero.$id === editingId)}
@@ -162,114 +162,119 @@ const Hero = () => {
       )}
 
       {(!isAddingNew && !editingId) && (
-        <div className="bg-dark-100 rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-200">
-                <th className="p-3 text-left">Media</th>
-                <th className="p-3 text-left">Mobile Image</th>
-                <th className="p-3 text-left">Heading</th>
-                <th className="p-3 text-left">Sub Text</th>
-                <th className="p-3 text-left">Buttons</th>
-                <th className="p-3 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {heroes.map((hero) => (
-                <tr key={hero.$id} className="border-b border-dark-200">
-                  <td className="p-3">
-                    <div className="relative h-20 w-36 rounded overflow-hidden">
-                      {hero.video ? (
-                        <video
-                          src={hero.video}
-                          className="object-cover"
-                          autoPlay
-                          muted
-                          loop
-                        />
-                      ) : hero.image ? (
-                        <Image
-                          src={hero.image}
-                          alt="Hero image"
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-dark-200 flex items-center justify-center text-light-100/50">
-                          No Media
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div className="relative h-20 w-12 rounded overflow-hidden">
-                      {hero.mobile_image ? (
-                        <Image
-                          src={hero.mobile_image}
-                          alt="Mobile preview"
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-dark-200 flex items-center justify-center text-light-100/50">
-                          No image
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <span className="text-primary">{hero.heading}</span>
-                  </td>
-                  <td className="p-3">
-                    <span className="text-primary">{hero.sub_text}</span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-primary">{hero.button1}</span>
-                        <span className="text-xs text-gray-500">→</span>
-                        <span className="text-xs text-gray-500">{hero.button1_slug}</span>
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Media</TableHead>
+                <TableHead>Mobile Image</TableHead>
+                <TableHead>Heading</TableHead>
+                <TableHead>Sub Text</TableHead>
+                <TableHead>Buttons</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {heroes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                    No hero sections found. Add one to get started.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                heroes.map((hero) => (
+                  <TableRow key={hero.$id} className="group">
+                    <TableCell>
+                      <div className="relative h-20 w-36 rounded-lg overflow-hidden bg-muted">
+                        {hero.video ? (
+                          <video
+                            src={hero.video}
+                            className="object-cover h-full w-full"
+                            autoPlay
+                            muted
+                            loop
+                          />
+                        ) : hero.image ? (
+                          <Image
+                            src={hero.image}
+                            alt={hero.heading}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                            No Media
+                          </div>
+                        )}
                       </div>
-                      {hero.button2 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-primary">{hero.button2}</span>
-                          <span className="text-xs text-gray-500">→</span>
-                          <span className="text-xs text-gray-500">{hero.button2_slug}</span>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => handleEdit(hero)}
-                        className="p-1 text-blue-500 hover:text-blue-700"
-                        title="Edit Hero"
-                      >
-                        <Pencil className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteId(hero.$id!)}
-                        className="p-1 text-red-500 hover:text-red-700"
-                        title="Delete Hero"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {heroes.length === 0 && (
-            <div className="p-6 text-center text-light-100/50">
-              No hero sections found. Add one to get started.
-            </div>
-          )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="relative h-20 w-12 rounded-lg overflow-hidden bg-muted">
+                        {hero.mobile_image ? (
+                          <Image
+                            src={hero.mobile_image}
+                            alt={`${hero.heading} mobile`}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                            No mobile image
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium max-w-[200px] truncate">
+                      {hero.heading}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                      {hero.sub_text}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium">{hero.button1}</div>
+                        {hero.button2 && (
+                          <div className="text-xs text-muted-foreground">{hero.button2}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(hero)}
+                          disabled={Boolean(savingId)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteId(hero.$id!)}
+                          disabled={Boolean(savingId)}
+                          className="h-8 w-8 p-0 hover:text-destructive"
+                        >
+                          {savingId === hero.$id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={deleteId !== null}
         onClose={() => setDeleteId(null)}

@@ -58,7 +58,7 @@ const RenewConfirmationModal = ({ isOpen, onClose, onConfirm, coupon }: RenewMod
         <div className="flex gap-4">
           <Button 
             onClick={() => onConfirm(newExpiryDate)}
-            className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-primary/90 transition-all"
+            className="flex-1 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
             disabled={!newExpiryDate}
           >
             Renew Coupon
@@ -218,13 +218,13 @@ const CouponsPage = () => {
                         setSelectedCoupon(coupon);
                         setShowForm(true);
                       }}
-                      className="p-1 text-blue-500 hover:text-blue-700"
+                      className="p-1 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
                     <Button
                       onClick={() => setDeleteId(coupon.$id)}
-                      className="p-1 text-red-500 hover:text-red-700"
+                      className="p-1 text-red-500 hover:text-red-400 hover:bg-red-500/10"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -275,16 +275,15 @@ const CouponsPage = () => {
                     </span>
                     <div className="flex gap-3">
                       <Button
+                        variant="outline"
                         onClick={() => setRenewCoupon(coupon)}
-                        className="bg-black text-primary border border-primary/40 px-4 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gray-800 transition-colors"
-                        title="Renew Coupon"
+                        className="bg-white hover:bg-gray-100 text-gray-900"
                       >
-                        <RefreshCw className="w-4 h-4" />
                         Renew
                       </Button>
                       <Button
                         onClick={() => setDeleteId(coupon.$id)}
-                        className="bg-dark-100 text-red-400 border border-red-500/30 px-4 py-1.5 rounded-lg flex items-center gap-1.5 hover:bg-dark-200 transition-colors"
+                        className="bg-dark-100 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/30 px-4 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
                         title="Delete Coupon"
                       >
                         <Trash2 className="w-4 h-4" />

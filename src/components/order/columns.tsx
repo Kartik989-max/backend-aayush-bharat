@@ -1,69 +1,96 @@
+'use client';
+
 import { ColumnDef } from '@tanstack/react-table';
 import { OrderType } from '@/types/order';
-import { Edit } from 'lucide-react';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { ArrowUpDown, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 export const columns: ColumnDef<OrderType>[] = [
   {
+    accessorKey: '$id',
+    header: 'Order ID',
+  },
+  {
     accessorKey: 'first_name',
-    header: 'Name',
-    cell: ({ row }) => `${row.original.first_name} ${row.original.last_name}`,
+    header: 'First Name',
+  },
+  {
+    accessorKey: 'last_name',
+    header: 'Last Name',
   },
   {
     accessorKey: 'email',
     header: 'Email',
   },
   {
-    accessorKey: 'total_price',
-    header: 'Total',
-    cell: ({ row }) => `₹${row.original.total_price}`,
+    accessorKey: 'phone_number',
+    header: 'Phone',
   },
   {
     accessorKey: 'payment_status',
-    header: 'Payment',
-    cell: ({ row }) => (
-      <span className={`px-2 py-1 rounded-full text-xs ${
-        row.original.payment_status === 'paid' ? 'bg-green-900/30 text-green-400' :
-        row.original.payment_status === 'pending' ? 'bg-yellow-900/30 text-yellow-400' :
-        row.original.payment_status === 'failed' ? 'bg-red-900/30 text-red-400' :
-        'bg-blue-900/30 text-blue-400'
-      }`}>
-        {row.original.payment_status}
-      </span>
-    )
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="hover:bg-transparent"
+        >
+          Payment Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const status = row.getValue('payment_status') as string;
+      return (
+        <Badge variant={status === 'paid' ? 'default' : 'destructive'}>
+          {status}
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: 'shipping_status',
-    header: 'Shipping',
-    cell: ({ row }) => (
-      <span className={`px-2 py-1 rounded-full text-xs ${
-        row.original.shipping_status === 'delivered' ? 'bg-green-900/30 text-green-400' :
-        row.original.shipping_status === 'pending' ? 'bg-yellow-900/30 text-yellow-400' :
-        row.original.shipping_status === 'cancelled' ? 'bg-red-900/30 text-red-400' :
-        'bg-blue-900/30 text-blue-400'
-      }`}>
-        {row.original.shipping_status || 'pending'}
-      </span>
-    )
-  },
-  {
-    accessorKey: 'created_at',
-    header: 'Date',
-    cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
-  },
-  {
-    accessorKey: 'actions',
-    header: 'Actions',
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <Link
-          href={`/dashboard/orders/${row.original.$id}`}
-          className="p-2 text-primary hover:text-primary/80 rounded-full 
-            hover:bg-dark-200 transition-colors"
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="hover:bg-transparent"
         >
-          <Edit className="h-4 w-4" />
-        </Link>
-      </div>
-    )
-  }
+          Shipping Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const status = row.getValue('shipping_status') as string;
+      return (
+        <Badge 
+          variant={
+            status === 'delivered' ? 'default' :
+            status === 'cancelled' ? 'destructive' :
+            status === 'shipped' ? 'secondary' : 'outline'
+          }
+        >
+          {status}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: 'actions',
+    cell: ({ row }) => {
+      const order = row.original;
+      return (
+        <Button variant="ghost" size="icon" asChild>
+          <Link href={`/dashboard/orders/${order.$id}`}>
+            <Eye className="h-4 w-4" />
+          </Link>
+        </Button>
+      );
+    },
+  },
 ];

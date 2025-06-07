@@ -97,12 +97,12 @@ const uploadFile = async (file: File) => {
 };
 
 // Enhanced file preview function with error handling and URL sanitization
-const getFilePreview = (fileId: string) => {
+const getFilePreview = (fileId: string, customBucketId?: string) => {
     if (!fileId) return '';
     
     try {
         const baseUrl = 'https://backend.aayudhbharat.com/v1';
-        const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
+        const bucketId = customBucketId || process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
         const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
         
         // Include mode=admin in the URL

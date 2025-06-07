@@ -17,6 +17,9 @@ import {
   Film
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { cn } from '@/lib/utils';
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -86,37 +89,44 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="h-screen border-r-2 w-64 bg-dark fixed left-0 top-0">
+    <Card className="h-screen border-r-2 w-64 bg-card fixed left-0 top-0 rounded-none">
       <div className="p-6">
         <h1 className="text-2xl border-b-2 font-bold text-primary mb-8">Admin</h1>
         
-        <nav className="space-y-3">
+        <nav className="space-y-2">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`dashboard/${item.href}/`);
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
-              <Link 
+              <Button
                 key={item.name}
-                href={item.href}
-                className={`sidebar-link hover:bg-slate-100 ${isActive ? 'bg-slate-100' : 'bg-none'}`}
+                variant={isActive ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-2",
+                  isActive ? "bg-secondary" : "hover:bg-secondary/50"
+                )}
+                asChild
               >
-                <item.icon className="w-5 h-5" />
-                <span>{item.name}</span>
-              </Link>
+                <Link href={item.href}>
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              </Button>
             );
           })}
         </nav>
       </div>
 
       <div className="absolute bottom-0 w-full p-6">
-        <button 
+        <Button 
+          variant="ghost"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
           onClick={logout}
-          className="sidebar-link w-full text-red-500 hover:bg-red-500/10"
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>
-        </button>
+        </Button>
       </div>
-    </aside>
+    </Card>
   );
 };
 

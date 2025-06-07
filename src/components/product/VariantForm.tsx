@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Variants } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { MediaManager } from '../media/MediaManager';
 import { getFilePreview } from '@/lib/appwrite';
 import { productService } from '@/services/productService';
@@ -10,9 +11,13 @@ import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { databases, ID } from '@/lib/appwrite';
 import { Query } from 'appwrite';
+import { Plus, Trash2, Image as ImageIcon, X } from 'lucide-react';
+import { Dialog } from "../ui/dialog";
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface VariantFormProps {
   productId?: string;
+  variants?: Variants[];
   onChange?: (variants: Variants[]) => void;
   onVariantCreate?: (variantData: Variants) => void;
 }
@@ -28,8 +33,15 @@ type VariantUpdateData = {
   additionalImages: string[];
 };
 
-const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVariantCreate }) => {
-  const [variants, setVariants] = useState<Variants[]>([{
+type VariantField = Exclude<keyof Variants, '$id'>;
+
+const VariantForm: React.FC<VariantFormProps> = ({ 
+  productId, 
+  variants: initialVariants = [], 
+  onChange, 
+  onVariantCreate 
+}) => {
+  const [variants, setVariants] = useState<Variants[]>(initialVariants.length > 0 ? initialVariants : [{
     productId: productId || "",
     price: 0,
     weight: 0,
@@ -40,25 +52,17 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
     additionalImages: []
   }]);
 
-  const [currentVariant, setCurrentVariant] = useState<Variants>({
-    productId: productId || "",
-    price: 0,
-    weight: 0,
-    months: 1,
-    sale_price: 0,
-    stock: 0,
-    image: "",
-    additionalImages: []
-  });
-
   const [loading, setLoading] = useState(false);
   const [variantImageIndexes, setVariantImageIndexes] = useState<{ index: number }>({ index: 0 });
   const [isSelectingVariant, setIsSelectingVariant] = useState(false);
   const [isSelectingVariantAdditional, setIsSelectingVariantAdditional] = useState(false);
   const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
-  const [isMediaAdditionalManagerOpen, setIsMediaAdditionalManagerOpen] = useState(false);  // Track whether this is the initial mount
+  const [isMediaAdditionalManagerOpen, setIsMediaAdditionalManagerOpen] = useState(false);
   const isInitialMount = React.useRef(true);
   const previousVariants = React.useRef<Variants[]>([]);
+  const [showMediaManager, setShowMediaManager] = useState(false);
+  const [currentVariantIndex, setCurrentVariantIndex] = useState<number | null>(null);
+  const [isAdditionalImages, setIsAdditionalImages] = useState(false);
 
   // Notify parent component of variant changes
   useEffect(() => {
@@ -119,7 +123,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
           stock: Number(doc.stock) || 0,
           months: Number(doc.months) || 1,
           image: doc.image || "",
-          additionalImages: Array.isArray(doc.additionalImages) ? doc.additionalImages : []
+          additionalImages: Array.isArray(doc.additionalImages) ? doc.additionalImages : [],
         }));
 
         console.log('Loaded variants:', loadedVariants);
@@ -149,7 +153,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
       sale_price: 0,
       stock: 0,
       image: "",
-      additionalImages: []
+      additionalImages: [],
     };
 
     if (!productId) {
@@ -171,7 +175,7 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
           months: Number(newVariant.months),
           sale_price: Number(newVariant.sale_price),
           stock: Number(newVariant.stock),
-          additionalImages: []
+          additionalImages: [],
         }
       );
 
@@ -194,84 +198,40 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
   // Update a variant
   const updateVariant = async (index: number, field: keyof VariantUpdateData, value: any) => {
     const variant = variants[index];
-    console.log('Current variant:', variant);
+    if (!productId || !variant.$id) return;
 
-    const isNumericField = field === 'price' || field === 'weight' ||
-                          field === 'sale_price' || field === 'stock' ||
-                          field === 'months';
-
-    let newValue = isNumericField ? parseInt(value) || 0 : value;
-    if (field === 'months' && (newValue < 1 || !newValue)) newValue = 1;
-
-    console.log(`Updating ${field} to:`, newValue);
-
-    if (productId && variant.$id) {
-      try {
-        const updateData: VariantUpdateData = {
-          productId: variant.productId,
-          price: Number(variant.price) || 0,
-          weight: Number(variant.weight) || 0,
-          months: Number(variant.months) || 1,
-          sale_price: Number(variant.sale_price) || 0,
-          stock: Number(variant.stock) || 0,
-          image: variant.image || "",
-          additionalImages: Array.isArray(variant.additionalImages) ? variant.additionalImages : []
-        };
-
-        // Update the changed field
-        if (isNumericField) {
-          updateData[field] = Number(newValue);
-        } else if (field === 'additionalImages' && Array.isArray(value)) {
-          updateData.additionalImages = value;
-        } else if (field === 'image') {
-          updateData.image = value;
-        } else if (field === 'productId') {
-          updateData.productId = value;
-        }
-
-        console.log('Sending update to database:', updateData);
-
-        await databases.updateDocument(
-          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-          variant.$id,
-          updateData
-        );
-
-        // Update local state
-        const updatedVariant = {
-          ...variant,
-          ...updateData
-        };
-
-        const updatedVariants = variants.map((v, i) =>
-          i === index ? updatedVariant : v
-        );
-
-        setVariants(updatedVariants);
-        toast.success(`Updated ${field} successfully`);
-      } catch (error: any) {
-        console.error('Error updating variant:', error);
-        if (!navigator.onLine) {
-          toast.error('No internet connection. Please check your network.');
-        } else if (error?.code === 401) {
-          toast.error('Unauthorized access. Please login again.');
-        } else {
-          toast.error(`Failed to update ${field}. Please try again.`);
-        }
-      }
-    } else {
-      // Just update local state if no database ID
-      const updatedVariant = {
-        ...variant,
-        [field]: newValue
+    try {
+      const updateData: VariantUpdateData = {
+        productId: variant.productId,
+        price: Number(variant.price) || 0,
+        weight: Number(variant.weight) || 0,
+        months: Number(variant.months) || 1,
+        sale_price: Number(variant.sale_price) || 0,
+        stock: Number(variant.stock) || 0,
+        image: variant.image || "",
+        additionalImages: Array.isArray(variant.additionalImages) ? variant.additionalImages : []
       };
 
-      const updatedVariants = variants.map((v, i) =>
-        i === index ? updatedVariant : v
+      // Update the changed field
+      if (field === 'price' || field === 'weight' || field === 'months' || field === 'sale_price' || field === 'stock') {
+        (updateData[field] as number) = Number(value);
+      } else if (field === 'additionalImages' && Array.isArray(value)) {
+        updateData.additionalImages = value;
+      } else if (field === 'image') {
+        updateData.image = value;
+      }
+
+      await databases.updateDocument(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+        variant.$id,
+        updateData
       );
 
-      setVariants(updatedVariants);
+      toast.success(`Updated ${field} successfully`);
+    } catch (error: any) {
+      console.error('Error updating variant:', error);
+      toast.error(`Failed to update ${field}. Please try again.`);
     }
   };
 
@@ -396,35 +356,35 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
     const { name, value } = e.target;
     console.log(`Variant form input change - ${name}:`, value);
     
-    setCurrentVariant((prev: Variants) => {
-      const updated = { ...prev, [name]: value };
-      console.log("Updated variant state:", updated);
-      return updated;
-    });
+    setVariants(prev => prev.map(variant =>
+      variant.productId === productId ? { ...variant, [name]: value } : variant
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting variant with data:", currentVariant);
-    
-    // Ensure all numeric fields are properly converted
-    const submissionData = {
-      ...currentVariant,
-      price: Number(currentVariant.price),
-      weight: Number(currentVariant.weight),
-      months: Number(currentVariant.months),
-      sale_price: Number(currentVariant.sale_price),
-      stock: Number(currentVariant.stock),
-    };
-
-    console.log("Processed variant submission data:", submissionData);
+    console.log("Submitting variant with data:", variants);
     
     try {
-      const result = await productService.createVariant(submissionData);
-      console.log("Variant creation result:", result);
+      // Create each variant individually
+      const results = await Promise.all(
+        variants.map(async (variant) => {
+          const submissionData = {
+            ...variant,
+            price: Number(variant.price),
+            weight: Number(variant.weight),
+            months: Number(variant.months),
+            sale_price: Number(variant.sale_price),
+            stock: Number(variant.stock),
+          };
+          return await productService.createVariant(submissionData);
+        })
+      );
+      
+      console.log("Variant creation results:", results);
       
       // Clear the form
-      setCurrentVariant({
+      setVariants([{
         productId: productId || "",
         price: 0,
         weight: 0,
@@ -432,225 +392,283 @@ const VariantForm: React.FC<VariantFormProps> = ({ productId, onChange, onVarian
         sale_price: 0,
         stock: 0,
         image: "",
-        additionalImages: []
-      });
+        additionalImages: [],
+      }]);
       
       // Add to variants list
-      setVariants(prev => [...prev, result]);
+      setVariants(prev => [...prev, ...results]);
       
       // Notify parent
       if (onChange) {
-        onChange([...variants, result]);
+        onChange([...variants, ...results]);
       }
     } catch (error) {
-      console.error("Error creating variant:", error);
-      toast.error("Failed to create variant");
+      console.error("Error creating variants:", error);
+      toast.error("Failed to create variants");
+    }
+  };
+
+  const handleAddVariant = () => {
+    if (!productId) return;
+    const newVariant: Variants = {
+      productId,
+      price: 0,
+      weight: 0,
+      sale_price: 0,
+      stock: 0,
+      months: 1,
+      image: "",
+      additionalImages: [],
+    };
+    if (onChange) onChange([...variants, newVariant]);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    const newVariants = variants.filter((_, i) => i !== index);
+    if (onChange) onChange(newVariants);
+  };
+
+  const handleVariantChange = (
+    index: number,
+    field: VariantField,
+    value: string | number
+  ) => {
+    const newVariants = [...variants];
+    const variant = newVariants[index];
+    
+    // Convert numeric fields
+    if (typeof value === 'string' && ['price', 'weight', 'sale_price', 'stock', 'months'].includes(field)) {
+      const numValue = Number(value) || 0;
+      if (field === 'months' && numValue < 1) {
+        value = 1;
+      } else {
+        value = numValue;
+      }
+    }
+
+    // Update the variant
+    newVariants[index] = {
+      ...variant,
+      [field]: value
+    };
+
+    // Update state and notify parent
+    setVariants(newVariants);
+    if (onChange) {
+      onChange(newVariants);
+    }
+
+    // If we have a productId and variant.$id, update in database
+    if (productId && variant.$id) {
+      updateVariant(index, field as keyof VariantUpdateData, value);
+    }
+  };
+
+  const handleImageSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
+    if (currentVariantIndex === null || files.length === 0) return;
+    const newVariants = [...variants];
+    if (isAdditionalImages) {
+      newVariants[currentVariantIndex].additionalImages = [
+        ...newVariants[currentVariantIndex].additionalImages,
+        ...files.map(f => f.fileId)
+      ];
+    } else {
+      newVariants[currentVariantIndex].image = files[0].fileId;
+    }
+    if (onChange) onChange(newVariants);
+    setShowMediaManager(false);
+  };
+
+  const handleRemoveAdditionalImage = (variantIndex: number, imageId: string) => {
+    const newVariants = [...variants];
+    newVariants[variantIndex].additionalImages = newVariants[variantIndex].additionalImages.filter(
+      id => id !== imageId
+    );
+    if (onChange) onChange(newVariants);
+  };
+
+  const getImageUrl = (fileId: string) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+      const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
+      const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+
+      return `${baseUrl}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
+    } catch (error) {
+      console.error("Error generating image URL:", error);
+      return '';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className="text-xl font-semibold">Manage Variants</h3>
-          <p className="text-sm text-gray-500 mt-1">Each variant can have its own price, weight, and images</p>
-        </div>
-        <Button
-          type="button"
-          onClick={addVariant}
-          className="bg-green-600 text-white hover:bg-green-700 px-6 py-2 text-base font-medium shadow-md"
-        >
-          + Add Variant
-        </Button>
-      </div>
-
-      {variants.length === 0 && !loading ? (
-        <div className="p-4 border-2 border-dashed border-gray-300 rounded-md text-center">
-          <p className="text-gray-500 mb-3">No variants added yet</p>
-          <Button
-            type="button"
-            onClick={addVariant}
-            className="bg-green-600 text-white hover:bg-green-700 px-4 py-2"
-          >
-            + Add First Variant
-          </Button>
-        </div>
-      ) : (
-        <div className="grid gap-6">
+    <Card>
+      <CardHeader>
+        <CardTitle>Product Variants</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
           {variants.map((variant, index) => (
-            <Card key={variant.$id || index} className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium">Variant {index + 1}</h3>
-                {variants.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeVariant(index)}
-                  >
-                    Delete
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Images section */}
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium">Main Image</label>
-                    <div className="relative h-40 border rounded-lg overflow-hidden">
-                      {variant.image ? (
-                        <Image
-                          src={getFilePreview(variant.image)}
-                          alt="Variant"
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="h-full flex items-center justify-center bg-gray-50">
-                          <p className="text-gray-400">No image</p>
+            <Card key={variant.$id || `new-variant-${index}`}>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Price (₹)</Label>
+                    <Input
+                      type="number"
+                      value={variant.price}
+                      onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sale Price (₹)</Label>
+                    <Input
+                      type="number"
+                      value={variant.sale_price}
+                      onChange={(e) => handleVariantChange(index, 'sale_price', e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Weight (g)</Label>
+                    <Input
+                      type="number"
+                      value={variant.weight}
+                      onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stock</Label>
+                    <Input
+                      type="number"
+                      value={variant.stock}
+                      onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Months</Label>
+                    <Input
+                      type="number"
+                      value={variant.months}
+                      onChange={(e) => handleVariantChange(index, 'months', e.target.value)}
+                      min="1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Main Image</Label>
+                    <div className="flex items-center gap-2">
+                      {variant.image && (
+                        <div className="relative w-20 h-20">
+                          <Image
+                            src={getImageUrl(variant.image)}
+                            alt="Main variant"
+                            fill
+                            className="object-cover rounded-md"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6"
+                            onClick={() => handleVariantChange(index, 'image', '')}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setVariantImageIndexes({ index });
-                        setIsSelectingVariant(true);
-                        setIsMediaManagerOpen(true);
-                      }}
-                    >
-                      Choose Image
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Additional Images</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {Array.isArray(variant.additionalImages) && variant.additionalImages.map((imageId, imgIndex) => (
-                        imageId && (
-                          <div key={imgIndex} className="relative h-20">
-                            <Image
-                              src={getFilePreview(imageId)}
-                              alt={`Additional ${imgIndex + 1}`}
-                              fill
-                              className="object-cover rounded"
-                            />
-                            <button
-                              onClick={() => removeVariantAdditionalImage(index, imgIndex)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                              type="button"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        )
-                      ))}
                       <Button
-                        type="button"
                         variant="outline"
-                        className="h-20"
                         onClick={() => {
-                          setVariantImageIndexes({ index });
-                          setIsSelectingVariantAdditional(true);
-                          setIsMediaAdditionalManagerOpen(true);
+                          setCurrentVariantIndex(index);
+                          setIsAdditionalImages(false);
+                          setShowMediaManager(true);
                         }}
                       >
-                        +
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        {variant.image ? "Change Image" : "Add Image"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Additional Images</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {variant.additionalImages.map((imageId) => (
+                        <div key={imageId} className="relative w-20 h-20">
+                          <Image
+                            src={getImageUrl(imageId)}
+                            alt="Additional variant"
+                            fill
+                            className="object-cover rounded-md"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6"
+                            onClick={() => handleRemoveAdditionalImage(index, imageId)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setCurrentVariantIndex(index);
+                          setIsAdditionalImages(true);
+                          setShowMediaManager(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Image
                       </Button>
                     </div>
                   </div>
                 </div>
 
-                {/* Details section */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Price (₹)</label>
-                      <Input
-                        type="number"
-                        value={variant.price}
-                        onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                        min="0"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Sale Price (₹)</label>
-                      <Input
-                        type="number"
-                        value={variant.sale_price}
-                        onChange={(e) => updateVariant(index, 'sale_price', e.target.value)}
-                        min="0"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Weight (grams)</label>
-                      <Input
-                        type="number"
-                        value={variant.weight}
-                        onChange={(e) => updateVariant(index, 'weight', e.target.value)}
-                        min="0"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Duration (months)</label>
-                      <Input
-                        type="number"
-                        value={variant.months}
-                        onChange={(e) => updateVariant(index, 'months', e.target.value)}
-                        min="1"
-                        required
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-sm font-medium">Stock</label>
-                      <Input
-                        type="number"
-                        value={variant.stock}
-                        onChange={(e) => updateVariant(index, 'stock', e.target.value)}
-                        min="0"
-                        required
-                      />
-                    </div>
-                  </div>
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleRemoveVariant(index)}
+                    disabled={variants.length === 1}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Remove Variant
+                  </Button>
                 </div>
-              </div>
+              </CardContent>
             </Card>
           ))}
-        </div>
-      )}
 
-      {variants.length > 0 && (
-        <div className="flex justify-center mt-4">
           <Button
-            type="button"
-            onClick={addVariant}
-            className="bg-green-600 text-white hover:bg-green-700 px-4 py-2"
+            onClick={handleAddVariant}
+            className="w-full"
+            disabled={loading}
           >
-            + Add Another Variant
+            <Plus className="h-4 w-4 mr-2" />
+            Add Variant
           </Button>
         </div>
-      )}
 
-      {/* Media Manager Modals */}
-      {isMediaManagerOpen && (
-        <MediaManager
-          onClose={() => setIsMediaManagerOpen(false)}
-          onSelect={handleMediaSelect}
-        />
-      )}
-
-      {isMediaAdditionalManagerOpen && (
-        <MediaManager
-          onClose={() => setIsMediaAdditionalManagerOpen(false)}
-          onSelect={handleMediaSelect}
-        />
-      )}
-    </div>
+        <Dialog
+          open={showMediaManager}
+          onClose={() => setShowMediaManager(false)}
+          title="Select Image"
+        >
+          <MediaManager
+            onSelect={handleImageSelect}
+            onClose={() => setShowMediaManager(false)}
+            allowMultiple={isAdditionalImages}
+            open={showMediaManager}
+          />
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 };
 

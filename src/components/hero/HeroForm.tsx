@@ -9,12 +9,12 @@ import { MediaManager } from '../media/MediaManager';
 import type { Hero } from '@/services/HeroService';
 
 interface HeroFormProps {
-  onSubmit: (data: Hero) => void;
-  initialData?: Hero;
+  onSubmit: (data: any) => Promise<void>;
   onCancel: () => void;
+  initialData?: any;
 }
 
-const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
+const HeroForm = ({ onSubmit, onCancel, initialData }: HeroFormProps) => {
   const [formData, setFormData] = useState<Hero>({
     heading: initialData?.heading || '',
     sub_text: initialData?.sub_text || '',
@@ -30,14 +30,18 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
   const [error, setError] = useState<string | null>(null);
   const [showMediaManager, setShowMediaManager] = useState<'main' | 'mobile' | false>(false);
 
+  const isVideoUrl = (fileId: string) => {
+    // Check if the file is in the video bucket
+    return fileId.includes("68447dfa00141d2b6986"); // Video bucket ID
+  };
+
   const handleMediaSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
     const file = files[0];
-    const fileUrl = file.url;
     
     if (showMediaManager === 'main') {
-      setFormData({ ...formData, desktop_view: fileUrl });
+      setFormData({ ...formData, desktop_view: file.url });
     } else if (showMediaManager === 'mobile') {
-      setFormData({ ...formData, mobile_view: fileUrl });
+      setFormData({ ...formData, mobile_view: file.url });
     }
     setShowMediaManager(false);
   };
@@ -75,10 +79,9 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
       )}
 
       <div className="grid grid-cols-2 gap-8">
-        {/* Left Column */}
         <div className="space-y-6">
           <div>
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            <label className="text-sm font-medium leading-none">
               Main Media* (Image or Video)
             </label>
             <p className="text-[0.8rem] text-muted-foreground mb-4">
@@ -91,7 +94,7 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
               className="w-full h-32 border-dashed group relative overflow-hidden"
             >
               {formData.desktop_view ? (
-                formData.desktop_view.match(/\.(mp4|webm|mov)$/i) ? (
+                isVideoUrl(formData.desktop_view) ? (
                   <video
                     key={formData.desktop_view}
                     src={formData.desktop_view}
@@ -125,9 +128,9 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
           </div>
 
           <div>
-            <label className="text-sm font-medium leading-none">Mobile Image (Optional)</label>
+            <label className="text-sm font-medium leading-none">Mobile Media (Optional)</label>
             <p className="text-[0.8rem] text-muted-foreground mb-4">
-              Upload a specific image for mobile devices
+              Upload specific media for mobile devices
             </p>
             <Button
               type="button"
@@ -136,7 +139,7 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
               className="w-48 h-64 border-dashed group relative overflow-hidden"
             >
               {formData.mobile_view ? (
-                formData.mobile_view.match(/\.(mp4|webm|mov)$/i) ? (
+                isVideoUrl(formData.mobile_view) ? (
                   <video
                     key={formData.mobile_view}
                     src={formData.mobile_view}

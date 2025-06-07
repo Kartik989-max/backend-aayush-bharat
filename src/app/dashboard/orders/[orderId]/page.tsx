@@ -5,7 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { OrderType } from '@/types/order';
 import { orderService } from '@/services/orderService';
 import { ArrowLeft } from 'lucide-react';
-
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 const statusOptions = [
   'pending',
@@ -54,7 +57,7 @@ export default function OrderDetailsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 bg-dark-100">
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <div className="relative inline-flex">
           <div className="w-12 h-12 bg-primary rounded-full opacity-75 animate-ping"></div>
           <div className="w-12 h-12 bg-primary rounded-full absolute inset-0 animate-pulse"></div>
@@ -68,66 +71,70 @@ export default function OrderDetailsPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-dark-100 p-8 flex items-center justify-center">
-        <div className="text-light-100/70 text-xl">Order not found</div>
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-muted-foreground text-xl">Order not found</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-dark-100 p-8">
+    <div className="p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Back Button */}
-        <button
+        <Button
+          variant="ghost"
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-light-100 hover:text-primary transition-colors mb-4"
+          className="flex items-center gap-2 text-primary hover:text-primary/80"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Orders</span>
-        </button>
+        </Button>
 
-        {/* Header */}
-        <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-light-100">Order Details</h1>
-              <p className="text-light-100/50">Order #{order.$id}</p>
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-2xl font-bold">Order Details</CardTitle>
+                <p className="text-muted-foreground">Order #{order.$id}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-muted-foreground">Created: {new Date(order.created_at).toLocaleString()}</p>
+                <p className="text-primary font-semibold">Total: ₹{order.total_price}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-light-100">Created: {new Date(order.created_at).toLocaleString()}</p>
-              <p className="text-primary font-semibold">Total: ₹{order.total_price}</p>
-            </div>
-          </div>
-        </div>
+          </CardHeader>
+        </Card>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Customer Information */}
-          <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6">
-            <h2 className="text-xl font-semibold text-light-100 mb-4">Customer Information</h2>
-            <div className="space-y-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <InfoRow label="Name" value={`${order.first_name} ${order.last_name}`} />
               <InfoRow label="Email" value={order.email} />
               <InfoRow label="Phone" value={order.phone_number} />
               <InfoRow label="User ID" value={order.user_id} />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Shipping Information */}
-          <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6">
-            <h2 className="text-xl font-semibold text-light-100 mb-4">Shipping Information</h2>
-            <div className="space-y-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shipping Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <InfoRow label="Address" value={order.address} />
               <InfoRow label="City" value={order.city} />
               <InfoRow label="State" value={order.state} />
               <InfoRow label="Country" value={order.country} />
               <InfoRow label="Pincode" value={order.pincode?.toString()} />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Payment Information */}
-          <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6">
-            <h2 className="text-xl font-semibold text-light-100 mb-4">Payment Information</h2>
-            <div className="space-y-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <InfoRow label="Payment Type" value={order.payment_type} />
               <InfoRow label="Payment Status" value={order.payment_status} />
               <InfoRow label="Payment Amount" value={`₹${order.payment_amount}`} />
@@ -135,97 +142,98 @@ export default function OrderDetailsPage() {
               <InfoRow label="Razorpay Payment ID" value={order.razorpay_payment_id} />
               <InfoRow label="Razorpay Signature" value={order.razorpay_signature} />
               <InfoRow label="Coupon Code" value={order.coupon_code || 'Not applied'} />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Refund Information */}
-          <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6">
-            <h2 className="text-xl font-semibold text-light-100 mb-4">Refund Information</h2>
-            <div className="space-y-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Refund Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               <InfoRow label="Refund Status" value={order.refund_status || 'No refund'} />
               <InfoRow label="Refund ID" value={order.refund_id} />
               <InfoRow label="Refund Amount" value={order.refund_amount ? `₹${order.refund_amount}` : '-'} />
               <InfoRow label="Refund Due" value={order.refund_due || '-'} />
               <InfoRow label="Cancellation Fee" value={order.cancellation_fee ? `₹${order.cancellation_fee}` : '-'} />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Shipping Status Section */}
-          <div className="bg-dark-200 rounded-lg shadow-lg border border-dark-300 p-6 md:col-span-2">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Current Status Display */}
-              <div>
-                <h2 className="text-xl font-semibold text-light-100 mb-4">Current Shipping Status</h2>
-                <div className="mb-4">
-                  <span className={`inline-block px-4 py-2 rounded-full font-semibold ${
-                    order.shipping_status === 'delivered' ? 'bg-green-500 text-white' :
-                    order.shipping_status === 'cancelled' ? 'bg-red-500 text-white' :
-                    order.shipping_status === 'shipped' ? 'bg-blue-500 text-white' :
-                    'bg-yellow-500 text-black'
-                  }`}>
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Shipping Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Current Status</h3>
+                  <Badge variant={
+                    order.shipping_status === 'delivered' ? 'default' :
+                    order.shipping_status === 'cancelled' ? 'destructive' :
+                    order.shipping_status === 'shipped' ? 'secondary' :
+                    'outline'
+                  }>
                     {order.shipping_status?.toUpperCase() || 'PENDING'}
-                  </span>
+                  </Badge>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Update Status</h3>
+                  <Select
+                    value={order.shipping_status || 'pending'}
+                    onValueChange={handleStatusChange}
+                    disabled={saving}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-
-              {/* Status Change Controls */}
-              <div>
-                <h2 className="text-xl font-semibold text-light-100 mb-4">Update Status</h2>
-                <select
-                  value={order.shipping_status || 'pending'}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  disabled={saving}
-                  className="w-full px-4 py-2 text-light-100 bg-dark-100 border border-dark-300 
-                    rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50
-                    disabled:cursor-not-allowed transition-colors"
-                >
-                  {statusOptions.map((status) => (
-                    <option key={status} value={status} className="bg-dark-100">
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
 }
 
-// Helper component for consistent info row styling
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
 
-  // Special styling for admin user ID
   if (label === "User ID" && value === "admin") {
     return (
       <div className="flex flex-col sm:flex-row sm:justify-between">
-        <span className="text-light-100/50">{label}:</span>
-        <span className="bg-yellow-400 text-black px-3 py-1 rounded-full font-medium">{value}</span>
+        <span className="text-muted-foreground">{label}:</span>
+        <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500">
+          {value}
+        </Badge>
       </div>
     );
   }
 
-  // Special handling for address
   if (label === "Address") {
     return (
       <div className="flex flex-col space-y-1">
-        <span className="text-light-100/50">{label}:</span>
-        <span className="text-light-100 break-words whitespace-pre-wrap">{value}</span>
+        <span className="text-muted-foreground">{label}:</span>
+        <span className="break-words whitespace-pre-wrap">{value}</span>
       </div>
     );
   }
 
-  // Handle other long text (like Razorpay IDs) with truncation
   const isLongText = value.length > 30 && !["Address", "User ID"].includes(label);
   
   return (
     <div className="flex flex-col sm:flex-row sm:justify-between">
-      <span className="text-light-100/50">{label}:</span>
+      <span className="text-muted-foreground">{label}:</span>
       <span 
-        className={`text-light-100 ${isLongText ? 'truncate max-w-[200px]' : ''}`} 
+        className={`${isLongText ? 'truncate max-w-[200px]' : ''}`} 
         title={isLongText ? value : ''}
       >
         {value}

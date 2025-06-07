@@ -12,13 +12,14 @@ import { Card, CardContent } from "../ui/card";
 import { cn } from "@/lib/utils";
 
 interface MediaManagerProps {
-  onSelect: (files: { fileId: string; url: string }[]) => void;
+  onSelect: (files: { fileId: string; url: string; mimeType?: string }[]) => void;
   onClose: () => void;
   allowMultiple?: boolean;
   open: boolean;
+  bucketId?: string; // Optional bucket ID to override default
 }
 
-export function MediaManager({ onSelect, onClose, allowMultiple = false, open }: MediaManagerProps) {
+export function MediaManager({ onSelect, onClose, allowMultiple = false, open, bucketId }: MediaManagerProps) {
   const [mediaType, setMediaType] = useState<"all" | "image" | "video">("all");
   const [files, setFiles] = useState<Models.File[]>([]);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -28,15 +29,30 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
 
   const itemsPerPage = 12;
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Calculate total pages
+  const totalPages = Math.ceil(totalFiles / itemsPerPage);
+
+  // Determine which bucket to use
+  const getActiveBucketId = (fileType?: "image" | "video") => {
+    if (bucketId) return bucketId;
+    if (fileType === "video") return "68447dfa00141d2b6986"; // Videos bucket
+    return "682762c0001ebf72e7f5"; // Default/images bucket
+  };
 
   useEffect(() => {
     fetchFiles();
-  }, [currentPage]);
+  }, [currentPage, mediaType]);
 
   const fetchFiles = async () => {
     try {
+      // Use appropriate bucket based on media type
+      const activeBucketId = mediaType === "video" ? 
+        "68447dfa00141d2b6986" : // Videos bucket
+        "682762c0001ebf72e7f5";  // Images bucket
+      
       const res = await storage.listFiles(
-        process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
+        bucketId || activeBucketId,
         [
           `limit(${itemsPerPage})`,
           `offset(${(currentPage - 1) * itemsPerPage})`,
@@ -44,7 +60,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
         ]
       );
       setFiles(res.files);
-      setTotalFiles(res.total); // Total number of files for pagination
+      setTotalFiles(res.total);
     } catch (err) {
       console.error("Error fetching files:", err);
     }
@@ -59,8 +75,6 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
     return nameMatches;
   });
 
-  const totalPages = Math.ceil(totalFiles / itemsPerPage);
-
   const toggleSelection = (id: string) => {
     setSelected((prev) =>
       allowMultiple ? (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]) : prev.includes(id) ? [] : [id]
@@ -69,17 +83,34 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
 
   const handleDelete = async () => {
     for (const fileId of selected) {
-      await storage.deleteFile(process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!, fileId);
+      try {
+        // Determine bucket based on file type
+        const file = files.find(f => f.$id === fileId);
+        const activeBucketId = file?.mimeType?.startsWith("video/") ?
+          "68447dfa00141d2b6986" : // Videos bucket
+          "682762c0001ebf72e7f5";  // Images bucket
+
+        await storage.deleteFile(bucketId || activeBucketId, fileId);
+      } catch (err) {
+        console.error(`Error deleting file ${fileId}:`, err);
+      }
     }
     setSelected([]);
     fetchFiles();
   };
 
   const handleSubmit = () => {
-    const selectedData = selected.map((id) => ({
-      fileId: id,
-      url: getFilePreview(id).toString(),
-    }));
+    const selectedData = selected.map((id) => {
+      const file = files.find(f => f.$id === id);
+      const fileType = file?.mimeType?.startsWith("video/") ? "video" : "image";
+      const activeBucketId = getActiveBucketId(fileType);
+      
+      return {
+        fileId: id,
+        url: getFilePreview(id, activeBucketId),
+        mimeType: file?.mimeType
+      };
+    });
     onSelect(selectedData);
     onClose();
   };
@@ -158,14 +189,14 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
                     <CardContent className="p-0 relative h-full">
                       {file.mimeType.startsWith("video/") ? (
                         <video
-                          src={getFilePreview(file.$id)}
+                          src={getFilePreview(file.$id, getActiveBucketId("video"))}
                           className="object-cover w-full h-full"
                           preload="metadata"
                           controls
                         />
                       ) : (
                         <Image
-                          src={getFilePreview(file.$id)}
+                          src={getFilePreview(file.$id, getActiveBucketId("image"))}
                           alt={file.name}
                           width={500}
                           height={500}
@@ -221,18 +252,27 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
             <div className="p-4">
               <Input
                 type="file"
-                multiple
-                accept="image/*,video/*"
+                multiple={allowMultiple}
+                accept={mediaType === "video" ? "video/*" : mediaType === "image" ? "image/*" : "image/*,video/*"}
                 onChange={async (e) => {
                   const files = e.target.files;
                   if (!files) return;
 
                   for (const file of Array.from(files)) {
-                    await storage.createFile(
-                      process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID!,
-                      ID.unique(),
-                      file
-                    );
+                    const isVideo = file.type.startsWith("video/");
+                    const activeBucketId = isVideo ? 
+                      "68447dfa00141d2b6986" : // Videos bucket
+                      "682762c0001ebf72e7f5";  // Images bucket
+
+                    try {
+                      await storage.createFile(
+                        bucketId || activeBucketId,
+                        ID.unique(),
+                        file
+                      );
+                    } catch (err) {
+                      console.error(`Error uploading file ${file.name}:`, err);
+                    }
                   }
                   fetchFiles();
                   setTab("browse");

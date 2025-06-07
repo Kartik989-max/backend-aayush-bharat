@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from "react";
 import type { Product, Variants } from "@/types/product";
 import { productService } from "@/services/productService";
@@ -21,6 +23,10 @@ import { databases } from "@/lib/appwrite";
 import { toast } from "react-toastify";
 import { ID, Query } from "appwrite";
 import ProductVideoForm from './ProductVideoForm';
+import { MediaManager } from '../media/MediaManager';
+import { Dialog } from '../ui/dialog';
+import { Image as ImageIcon, Plus, X } from 'lucide-react';
+import Image from 'next/image';
 
 interface Category {
   $id: string;
@@ -59,6 +65,9 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
     collections: initialData?.collections || [],
     variants: initialData?.variants || [],
     productVideo: initialData?.productVideo || null,
+    image: initialData?.image || "",
+    additionalImages: initialData?.additionalImages || [],
+    videos: initialData?.videos || [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -67,6 +76,9 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [variants, setVariants] = useState<Variants[]>(initialData?.variants || []);
+  const [showMediaManager, setShowMediaManager] = useState(false);
+  const [isAdditionalImages, setIsAdditionalImages] = useState(false);
+  const [isVideos, setIsVideos] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -158,7 +170,10 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
           sale_price: Number(v.sale_price),
           stock: Number(v.stock),
         })),
-        productVideo: form.productVideo
+        productVideo: form.productVideo,
+        image: form.image,
+        additionalImages: form.additionalImages,
+        videos: form.videos,
       };
 
       let data: Product;
@@ -206,6 +221,56 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
       toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMediaSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
+    if (files.length === 0) return;
+
+    if (isAdditionalImages) {
+      setForm(prev => ({
+        ...prev,
+        additionalImages: [...(prev.additionalImages || []), ...files.map(f => f.fileId)]
+      }));
+    } else if (isVideos) {
+      setForm(prev => ({
+        ...prev,
+        videos: [...(prev.videos || []), ...files.map(f => f.fileId)]
+      }));
+    } else {
+      setForm(prev => ({
+        ...prev,
+        image: files[0].fileId
+      }));
+    }
+
+    setShowMediaManager(false);
+  };
+
+  const handleRemoveImage = (imageId: string) => {
+    setForm(prev => ({
+      ...prev,
+      additionalImages: prev.additionalImages?.filter(id => id !== imageId) || []
+    }));
+  };
+
+  const handleRemoveVideo = (videoId: string) => {
+    setForm(prev => ({
+      ...prev,
+      videos: prev.videos?.filter(id => id !== videoId) || []
+    }));
+  };
+
+  const getImageUrl = (fileId: string) => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+      const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
+      const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+
+      return `${baseUrl}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
+    } catch (error) {
+      console.error("Error generating image URL:", error);
+      return '';
     }
   };
 
@@ -316,6 +381,109 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Main Image</Label>
+              <div className="flex items-center gap-2">
+                {form.image && (
+                  <div className="relative w-20 h-20">
+                    <Image
+                      src={getImageUrl(form.image)}
+                      alt="Main product"
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => setForm({ ...form, image: '' })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAdditionalImages(false);
+                    setIsVideos(false);
+                    setShowMediaManager(true);
+                  }}
+                >
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  {form.image ? "Change Image" : "Add Image"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Additional Images</Label>
+              <div className="flex flex-wrap gap-2">
+                {form.additionalImages?.map((imageId) => (
+                  <div key={imageId} className="relative w-20 h-20">
+                    <Image
+                      src={getImageUrl(imageId)}
+                      alt="Additional product"
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => handleRemoveImage(imageId)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAdditionalImages(true);
+                    setIsVideos(false);
+                    setShowMediaManager(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Image
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Videos</Label>
+              <div className="flex flex-wrap gap-2">
+                {form.videos?.map((videoId) => (
+                  <div key={videoId} className="relative w-20 h-20">
+                    <video
+                      src={getImageUrl(videoId)}
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => handleRemoveVideo(videoId)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsVideos(true);
+                    setIsAdditionalImages(false);
+                    setShowMediaManager(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Video
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -346,6 +514,20 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
           </div>
         </form>
       </CardContent>
+
+      <Dialog
+        open={showMediaManager}
+        onClose={() => setShowMediaManager(false)}
+        title={isVideos ? "Select Video" : "Select Image"}
+      >
+        <MediaManager
+          onSelect={handleMediaSelect}
+          onClose={() => setShowMediaManager(false)}
+          allowMultiple={isAdditionalImages}
+          open={showMediaManager}
+          mediaType={isVideos ? "video" : "image"}
+        />
+      </Dialog>
     </Card>
   );
 };

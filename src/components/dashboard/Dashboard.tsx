@@ -2,11 +2,16 @@
 import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import CountUp from 'react-countup';
+import { orderService } from '@/services/orderService';
 import { listDocuments } from '@/lib/appwrite';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut, TrendingUp, ShoppingCart, Package, Layers, AlertTriangle, XCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -36,9 +41,16 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     products: 0,
     categories: 0,
-  
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    dailyRevenue: 0,
+    totalOrders: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0
   });
   
+  const [monthlyData, setMonthlyData] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     if (!currentUser) {
@@ -49,19 +61,41 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true);
+        // Fetch basic stats
         const products = await listDocuments(process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!);
         const categories = await listDocuments(process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!);
         
+        // Get order analytics
+        const orderAnalytics = await orderService.getOrderAnalytics();
+        
+        // Calculate inventory stats
+        const lowStockCount = products.documents.filter(p => {
+          const stock = p.variants?.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) || 0;
+          return stock > 0 && stock < 10;
+        }).length;
+        
+        const outOfStockCount = products.documents.filter(p => {
+          const stock = p.variants?.reduce((sum: number, v: any) => sum + (v.stock || 0), 0) || 0;
+          return stock === 0;
+        }).length;
 
         setStats({
           products: products.documents.length,
           categories: categories.documents.length,
-          
+          totalRevenue: orderAnalytics.totalRevenue,
+          monthlyRevenue: orderAnalytics.monthlyRevenue,
+          dailyRevenue: orderAnalytics.dailyRevenue,
+          totalOrders: orderAnalytics.totalOrders,
+          lowStockItems: lowStockCount,
+          outOfStockItems: outOfStockCount
         });
-      
+
+        setMonthlyData(orderAnalytics.monthlyData);
       } catch (error) {
         console.error('Error fetching stats:', error);
-        
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -73,8 +107,51 @@ const Dashboard = () => {
   }
 
   const displayStats = [
-    { title: 'Total Products', value: stats.products, change: '+12%' },
-    { title: 'Total Categories', value: stats.categories, change: '+8%' },
+    { 
+      title: 'Total Revenue', 
+      value: stats.totalRevenue,
+      prefix: '₹',
+      change: '+15%' 
+    },
+    { 
+      title: 'Monthly Revenue', 
+      value: stats.monthlyRevenue,
+      prefix: '₹',
+      change: '+10%' 
+    },
+    { 
+      title: "Today's Revenue", 
+      value: stats.dailyRevenue,
+      prefix: '₹',
+      change: '+5%' 
+    },
+    { 
+      title: 'Total Orders', 
+      value: stats.totalOrders,
+      change: '+12%' 
+    },
+    { 
+      title: 'Total Products', 
+      value: stats.products, 
+      change: '+8%' 
+    },
+    { 
+      title: 'Total Categories', 
+      value: stats.categories, 
+      change: '+6%' 
+    },
+    { 
+      title: 'Low Stock Items', 
+      value: stats.lowStockItems,
+      change: stats.lowStockItems > 10 ? '-8%' : '+0%',
+      alert: stats.lowStockItems > 10
+    },
+    { 
+      title: 'Out of Stock', 
+      value: stats.outOfStockItems,
+      change: stats.outOfStockItems > 0 ? '-10%' : '+0%',
+      alert: stats.outOfStockItems > 0
+    }
   ];
 
   // const monthlyOrdersData = {
@@ -92,57 +169,118 @@ const Dashboard = () => {
   // };
 
   return (
-    <div>
-      <nav className="bg-dark-100 shadow-sm mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-light-100">Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={logout}
-                className="text-light-100 hover:text-primary flex items-center gap-2"
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
-            </div>
-          </div>
+    <div className="flex-1 space-y-4 p-8">
+      <div className="flex items-center justify-between space-y-2">
+        <h1 className="text-3xl font-bold text-primary">Dashboard Overview</h1>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={logout}
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </div>
-      </nav>
+      </div>
 
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-primary">Dashboard Overview</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          {displayStats.map((stat, index) => (
-            <div key={index} className="bg-dark-100 p-6 rounded-lg transform transition-all duration-300 hover:scale-105">
-              <h3 className="text-gray-400 mb-2">{stat.title}</h3>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">
-                  {/* {stat.prefix && stat.prefix} */}
-                  <CountUp
-                    end={stat.value}
-                    duration={2}
-                    separator=","
-                    useEasing={true}
-                    decimals={stat.title === 'Total Revenue' ? 2 : 0}
-                  />
-                </span>
-                <span className={`${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                  {stat.change}
-                </span>
-              </div>
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(8)].map((_, index) => (
+              <Card key={index}>
+                <CardHeader className="space-y-0 pb-2">
+                  <Skeleton className="h-4 w-[150px]" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-[100px]" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {displayStats.map((stat, index) => {
+                const Icon = stat.title.includes('Revenue') ? TrendingUp :
+                           stat.title.includes('Orders') ? ShoppingCart :
+                           stat.title.includes('Products') ? Package :
+                           stat.title.includes('Categories') ? Layers :
+                           stat.title.includes('Low Stock') ? AlertTriangle :
+                           XCircle;
+                           
+                return (
+                  <Card 
+                    key={index}
+                    className={`${stat.alert ? 'border-red-500 border-2' : ''} transition-all duration-300 hover:shadow-lg`}
+                  >
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        {stat.title}
+                      </CardTitle>
+                      <Icon className={`h-4 w-4 ${stat.alert ? 'text-red-500' : 'text-muted-foreground'}`} />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="text-2xl font-bold">
+                          {stat.prefix}
+                          <CountUp
+                            end={stat.value}
+                            duration={2}
+                            separator=","
+                            useEasing={true}
+                            decimals={stat.title.includes('Revenue') ? 2 : 0}
+                          />
+                        </div>
+                        <span 
+                          className={`text-sm font-medium ${
+                            stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'
+                          }`}
+                        >
+                          {stat.change}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
-          ))}
-        </div>
 
-        {/* <div className="bg-dark-100 p-6 rounded-lg mb-8">
-          <h2 className="text-xl font-bold mb-4 text-light-100">Monthly Revenue</h2>
-          <div className="h-[400px]">
+            {(stats.lowStockItems > 0 || stats.outOfStockItems > 0) && (
+              <Alert variant="destructive" className="mb-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Inventory Alert</AlertTitle>
+                <AlertDescription>
+                  {stats.outOfStockItems > 0 && `${stats.outOfStockItems} items are out of stock. `}
+                  {stats.lowStockItems > 0 && `${stats.lowStockItems} items are running low on stock.`}
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Revenue Overview</CardTitle>
+            <CardDescription>Track your revenue trends over the past year</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[400px]">
             <Line 
-              data={monthlyOrdersData}
+              data={{
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [
+                  {
+                    label: 'Monthly Revenue (₹)',
+                    data: monthlyData,
+                    borderColor: '#7da09e',
+                    backgroundColor: 'rgba(125, 160, 158, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                  }
+                ]
+              }}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
@@ -153,18 +291,18 @@ const Dashboard = () => {
                       color: 'rgba(255, 255, 255, 0.1)',
                     },
                     ticks: {
-                      callback: (value) => `₹${value}`
+                      callback: (value) => `₹${value.toLocaleString()}`
                     }
                   },
                   x: {
                     grid: {
                       color: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  },
+                    }
+                  }
                 },
                 plugins: {
                   legend: {
-                    position: 'top',
+                    position: 'top'
                   },
                   tooltip: {
                     callbacks: {
@@ -177,7 +315,8 @@ const Dashboard = () => {
               }}
             />
           </div>
-        </div> */}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

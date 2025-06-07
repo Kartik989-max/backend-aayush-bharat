@@ -10,6 +10,52 @@ export const orderService = {
     return response.documents as OrderType[];
   },
 
+  async getOrderAnalytics() {
+    const orders = await this.getOrders();
+    const today = new Date();
+    const thisMonth = today.getMonth();
+    const thisYear = today.getFullYear();
+
+    const monthlyData = Array(12).fill(0);
+    let totalRevenue = 0;
+    let monthlyRevenue = 0;
+    let dailyRevenue = 0;
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.$createdAt);
+      const orderAmount = order.total_amount || 0;
+
+      // Total revenue
+      totalRevenue += orderAmount;
+
+      // Monthly data for chart
+      if (orderDate.getFullYear() === thisYear) {
+        monthlyData[orderDate.getMonth()] += orderAmount;
+      }
+
+      // This month's revenue
+      if (orderDate.getMonth() === thisMonth && orderDate.getFullYear() === thisYear) {
+        monthlyRevenue += orderAmount;
+      }
+
+      // Today's revenue
+      if (orderDate.toDateString() === today.toDateString()) {
+        dailyRevenue += orderAmount;
+      }
+    });
+
+    return {
+      totalRevenue,
+      monthlyRevenue,
+      dailyRevenue,
+      monthlyData,
+      totalOrders: orders.length,
+      recentOrders: orders.sort((a, b) => 
+        new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime()
+      ).slice(0, 5)
+    };
+  },
+
   async getOrderById(orderId: string): Promise<OrderType> {
     const response = await databases.getDocument(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,

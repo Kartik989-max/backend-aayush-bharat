@@ -166,8 +166,8 @@ const Hero = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Media</TableHead>
-                <TableHead>Mobile Image</TableHead>
+                <TableHead>Desktop Media</TableHead>
+                <TableHead>Mobile Media</TableHead>
                 <TableHead>Heading</TableHead>
                 <TableHead>Sub Text</TableHead>
                 <TableHead>Buttons</TableHead>
@@ -186,21 +186,24 @@ const Hero = () => {
                   <TableRow key={hero.$id} className="group">
                     <TableCell>
                       <div className="relative h-20 w-36 rounded-lg overflow-hidden bg-muted">
-                        {hero.video ? (
-                          <video
-                            src={hero.video}
-                            className="object-cover h-full w-full"
-                            autoPlay
-                            muted
-                            loop
-                          />
-                        ) : hero.image ? (
-                          <Image
-                            src={hero.image}
-                            alt={hero.heading}
-                            fill
-                            className="object-cover"
-                          />
+                        {hero.desktop_view ? (
+                          hero.desktop_view.includes('68447dfa00141d2b6986') ? (
+                            <video
+                              src={hero.desktop_view}
+                              className="object-cover h-full w-full"
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                            />
+                          ) : (
+                            <Image
+                              src={hero.desktop_view}
+                              alt={hero.heading}
+                              fill
+                              className="object-cover"
+                            />
+                          )
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-muted-foreground">
                             No Media
@@ -210,16 +213,27 @@ const Hero = () => {
                     </TableCell>
                     <TableCell>
                       <div className="relative h-20 w-12 rounded-lg overflow-hidden bg-muted">
-                        {hero.mobile_image ? (
-                          <Image
-                            src={hero.mobile_image}
-                            alt={`${hero.heading} mobile`}
-                            fill
-                            className="object-cover"
-                          />
+                        {hero.mobile_view ? (
+                          hero.mobile_view.includes('68447dfa00141d2b6986') ? (
+                            <video
+                              src={hero.mobile_view}
+                              className="object-cover h-full w-full"
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                            />
+                          ) : (
+                            <Image
+                              src={hero.mobile_view}
+                              alt={`${hero.heading} mobile`}
+                              fill
+                              className="object-cover"
+                            />
+                          )
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
-                            No mobile image
+                            No mobile media
                           </div>
                         )}
                       </div>

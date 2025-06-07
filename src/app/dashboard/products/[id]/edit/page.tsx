@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { use } from 'react';
 import { Product } from '@/types/product';
 import { productService } from '@/services/productService';
 import ProductForm from '@/components/product/ProductForm';
@@ -15,12 +14,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const productId = use(Promise.resolve(params.id));
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const data = await productService.getProductWithVariants(productId);
+        const data = await productService.getProductWithVariants(params.id);
         setProduct(data);
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -31,11 +29,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     };
 
     fetchProduct();
-  }, [productId]);
+  }, [params.id]);
 
   const handleSubmit = async (formData: any) => {
     try {
-      await productService.updateProduct(productId, formData);
+      await productService.updateProduct(params.id, formData);
       toast.success('Product updated successfully');
       router.push('/dashboard/products');
     } catch (error) {

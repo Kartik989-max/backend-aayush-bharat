@@ -185,7 +185,7 @@ const Product = () => {
       // Remove image from all variants' additionalImages
       const updatedVariants = product.variants.map(variant => ({
         ...variant,
-        additionalImages: variant.additionalImages.filter((id: string) => id !== imageId)
+        additionalImages: (variant.additionalImages || []).filter((id: string) => id !== imageId)
       }));
       // Optionally, update the product in the database here if needed
       // Refresh products after update
@@ -372,7 +372,7 @@ const Product = () => {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => setDeleteId(product.$id)}
+                              onClick={() => setDeleteId(product.$id || null)}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete

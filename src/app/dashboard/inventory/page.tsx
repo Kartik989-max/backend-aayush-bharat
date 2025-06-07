@@ -19,19 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDownIcon, ChevronRightIcon, PackageIcon } from "lucide-react";
 
-interface BaseProduct {
-  $id: string;
-  name: string;
-  description: string;
-  category: string;
-  tags: string;
-  slug: string;
-  ingredients: string;
-  collections: string[];
-  product_video?: string;
-  videos: string[];
-}
-
 interface Variant {
   $id: string;
   productId: string;
@@ -39,17 +26,25 @@ interface Variant {
   price: number;
   weight: number;
   sale_price: number;
-  months: number;  // Changed from any implicit type to number
+  months: number;
   stock: number;
   additionalImages: string[];
 }
 
-interface Product extends BaseProduct {
+interface Product {
+  $id: string;
+  name: string;
+  description: string;
+  category: string;
+  tags: string;
+  slug: string;
+  ingredients: string;
   variants: Variant[];
+  collections: string[];
+  productVideo: string[];
   stock: number;
   price: number;
   status: string;
-  videos: string[];  // Explicitly included from BaseProduct
 }
 
 export default function InventoryPage() {
@@ -87,7 +82,7 @@ export default function InventoryPage() {
 
               const productWithVariants: Product = {
                 ...product,
-                videos: product.videos || [],
+                productVideo: product.productVideo || [],
                 variants: processedVariants,
                 // Calculate total stock across all variants
                 stock: processedVariants.reduce(
@@ -110,7 +105,7 @@ export default function InventoryPage() {
               return {
                 ...product,
                 variants: [],
-                videos: product.videos || [],
+                productVideo: product.productVideo || [],
                 stock: 0,
                 price: 0,
                 status: ''

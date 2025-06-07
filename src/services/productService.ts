@@ -109,7 +109,34 @@ export const productService = {
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!
     );
-    return response.documents as unknown as Product[];
+
+    // Fetch variants for each product
+    const productsWithVariants = await Promise.all(
+      response.documents.map(async (product) => {
+        const variants = await databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+          [Query.equal("productId", product.$id)]
+        );
+
+        return {
+          ...product,
+          variants: variants.documents.map(doc => ({
+            $id: doc.$id,
+            productId: doc.productId as string,
+            price: Number(doc.price),
+            weight: Number(doc.weight),
+            sale_price: Number(doc.sale_price),
+            stock: Number(doc.stock),
+            months: Number(doc.months),
+            image: doc.image as string,
+            additionalImages: Array.isArray(doc.additionalImages) ? doc.additionalImages : []
+          }))
+        };
+      })
+    );
+
+    return productsWithVariants as unknown as Product[];
   },
 
   async getProductWithVariants(productId: string): Promise<Product> {

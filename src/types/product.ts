@@ -2,14 +2,14 @@ import { Models } from 'appwrite';
 
 export interface Variants {
   $id?: string;
-  weight: number;
+  productId?: string;
   price: number;
   sale_price: number;
   stock: number;
-  productId: string;
+  weight: number;
   months: number;
+  image?: string;
   additionalImages: string[];
-  image: string;
 }
 
 export interface Collections{
@@ -22,15 +22,14 @@ export interface Collections{
 export interface Product {
   $id: string;
   name: string;
-  tags: string;
-  slug: string;
   description: string;
   category: string;
+  tags: string;
+  slug: string;
   ingredients: string;
   variants: Variants[];
   collections: string[];
-  productVideo: ProductVideo[];
-  image: string;
+  productVideo: string[];
 }
 
 export interface ProductVideo {
@@ -57,10 +56,10 @@ export interface Collection {
 
 export interface ProductFormData {
   name: string;
-  tags: string;
-  slug: string;
   description: string;
   category: string;
+  tags: string;
+  slug: string;
   ingredients: string;
   variants: {
     weight: number;
@@ -68,11 +67,9 @@ export interface ProductFormData {
     sale_price: number;
     stock: number;
     months: number;
+    image?: string;
     additionalImages: string[];
-    image: string;
   }[];
   collections: string[];
-  productVideo: {
-    videos: string[];
-  }[];
+  productVideo: string[];
 }

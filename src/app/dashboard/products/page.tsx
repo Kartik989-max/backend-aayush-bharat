@@ -12,8 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
-import { Dialog } from '@/components/ui/dialog';
-import ProductForm from '@/components/product/ProductForm';
 import { databases } from '@/lib/appwrite';
 
 export default function ProductsPage() {
@@ -21,7 +19,6 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -59,18 +56,6 @@ export default function ProductsPage() {
     }
   };
 
-  const handleCreateSubmit = async (formData: any) => {
-    try {
-      await productService.createProduct(formData);
-      toast.success('Product created successfully');
-      setShowCreateForm(false);
-      fetchProducts();
-    } catch (error) {
-      console.error('Error creating product:', error);
-      toast.error('Failed to create product');
-    }
-  };
-
   const getImageUrl = (fileId: string) => {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
@@ -103,7 +88,7 @@ export default function ProductsPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Button onClick={() => setShowCreateForm(true)}>
+        <Button onClick={() => router.push('/dashboard/products/add')} variant="default" className="bg-primary hover:bg-primary/90 text-white">
           <Plus className="h-4 w-4 mr-2" />
           Add Product
         </Button>
@@ -137,19 +122,22 @@ export default function ProductsPage() {
               </TableHeader>
               <TableBody>
                 {filteredProducts.map((product) => {
-                  const minPrice = Math.min(...product.variants.map(v => v.price));
-                  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+                  // Get the first variant's price and stock if available
+                  const firstVariant = product.variants?.[0];
+                  const price = firstVariant?.price || 0;
+                  const stock = firstVariant?.stock || 0;
                   
                   return (
                     <TableRow key={product.$id}>
                       <TableCell>
-                        {product.image && (
+                        {product.variants?.[0]?.image && (
                           <div className="relative w-16 h-16">
                             <Image
-                              src={getImageUrl(product.image)}
+                              src={getImageUrl(product.variants[0].image || '')}
                               alt={product.name}
                               fill
                               className="object-cover rounded-md"
+                              unoptimized
                             />
                           </div>
                         )}
@@ -158,8 +146,8 @@ export default function ProductsPage() {
                       <TableCell>
                         <Badge variant="secondary">{product.category}</Badge>
                       </TableCell>
-                      <TableCell>₹{minPrice}</TableCell>
-                      <TableCell>{totalStock}</TableCell>
+                      <TableCell>₹{price}</TableCell>
+                      <TableCell>{stock}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
@@ -172,7 +160,7 @@ export default function ProductsPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleDelete(product.$id)}
+                            onClick={() => product.$id && handleDelete(product.$id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -186,18 +174,6 @@ export default function ProductsPage() {
           </div>
         </CardContent>
       </Card>
-
-      <Dialog
-        open={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        title="Create New Product"
-      >
-        <ProductForm
-          initialData={null}
-          onSubmit={handleCreateSubmit}
-          onCancel={() => setShowCreateForm(false)}
-        />
-      </Dialog>
     </div>
   );
 }

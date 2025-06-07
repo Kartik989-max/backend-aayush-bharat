@@ -41,16 +41,24 @@ const VariantForm: React.FC<VariantFormProps> = ({
   onChange, 
   onVariantCreate 
 }) => {
-  const [variants, setVariants] = useState<Variants[]>(initialVariants.length > 0 ? initialVariants : [{
-    productId: productId || "",
-    price: 0,
-    weight: 0,
-    months: 1,
-    sale_price: 0,
-    stock: 0,
-    image: "",
-    additionalImages: []
-  }]);
+  const [variants, setVariants] = useState<Variants[]>(() => {
+    if (initialVariants.length > 0) {
+      return initialVariants.map(variant => ({
+        ...variant,
+        additionalImages: variant.additionalImages || []
+      }));
+    }
+    return [{
+      productId: productId || "",
+      price: 0,
+      weight: 0,
+      months: 1,
+      sale_price: 0,
+      stock: 0,
+      image: "",
+      additionalImages: []
+    }];
+  });
 
   const [loading, setLoading] = useState(false);
   const [variantImageIndexes, setVariantImageIndexes] = useState<{ index: number }>({ index: 0 });
@@ -202,7 +210,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
 
     try {
       const updateData: VariantUpdateData = {
-        productId: variant.productId,
+        productId: variant.productId || productId || '',
         price: Number(variant.price) || 0,
         weight: Number(variant.weight) || 0,
         months: Number(variant.months) || 1,
@@ -283,16 +291,14 @@ const VariantForm: React.FC<VariantFormProps> = ({
 
     const fileId = files[0].fileId;
     const index = variantImageIndexes.index;
+    const variant = variants[index];
+    if (!variant) return;
 
     if (isSelectingVariant) {
       updateVariant(index, 'image', fileId);
       setIsSelectingVariant(false);
     } else if (isSelectingVariantAdditional) {
-      const variant = variants[index];
-      const currentImages = Array.isArray(variant.additionalImages)
-        ? [...variant.additionalImages]
-        : [];
-
+      const currentImages = [...variant.additionalImages];
       currentImages.push(fileId);
       updateVariant(index, 'additionalImages', currentImages);
       setIsSelectingVariantAdditional(false);
@@ -305,15 +311,13 @@ const VariantForm: React.FC<VariantFormProps> = ({
   // Remove an additional image
   const removeVariantAdditionalImage = async (variantIndex: number, imageIndex: number) => {
     const variant = variants[variantIndex];
+    if (!variant) return;
+
+    const currentImages = [...variant.additionalImages];
+    const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
 
     // If no productId or no variant.$id, just update in the UI
     if (!productId || !variant.$id) {
-      const currentImages = Array.isArray(variant.additionalImages)
-        ? [...variant.additionalImages]
-        : [];
-
-      const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
-
       const updatedVariants = [...variants];
       updatedVariants[variantIndex] = {
         ...variant,
@@ -324,12 +328,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
     }
 
     try {
-      const currentImages = Array.isArray(variant.additionalImages)
-        ? [...variant.additionalImages]
-        : [];
-
-      const updatedImages = currentImages.filter((_, i) => i !== imageIndex);
-
       await databases.updateDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,

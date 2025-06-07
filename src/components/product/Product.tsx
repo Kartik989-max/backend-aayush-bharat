@@ -3,13 +3,10 @@ import { useState, useEffect } from "react";
 import { databases, storage } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import ProductForm from "./ProductForm";
-import Image from "next/image";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 import type { Product as ProductType } from "@/types/product";
-import type { ProductFormData } from "@/services/productService";
 import { Button } from "../ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,9 +15,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {  Pencil, Trash2 } from "lucide-react";
 import { EyeIcon } from "lucide-react";
-import { Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,

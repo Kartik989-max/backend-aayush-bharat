@@ -36,6 +36,8 @@ interface ProductFormProps {
   onCancel: () => void;
 }
 
+import ProductVideoForm from './ProductVideoForm';
+
 const ProductCreateForm: React.FC<ProductFormProps> = ({
   initialData,
   onSubmit,
@@ -306,9 +308,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Variant Section */}
+        </div>        {/* Variant Section */}
         <div className="p-5 bg-white rounded-xl border space-y-5">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold">Product Variants</h3>
@@ -324,6 +324,21 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
               setVariants(variants);
             }}
           />
+        </div>        {/* Product Video Section */}
+        <div className="p-5 bg-white rounded-xl border space-y-5" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-semibold">Product Video</h3>
+            <p className="text-sm text-gray-500">Optional: Add a video to showcase your product</p>
+          </div>
+          {/* Move ProductVideoForm outside of form element to prevent submission */}
+          <div onClick={(e) => e.preventDefault()}>
+            <ProductVideoForm 
+              productId={form.$id || initialData?.$id}
+              onVideoAdded={(video) => {
+                console.log('Video added:', video);
+              }}
+            />
+          </div>
         </div>
 
         {/* Submit/Cancel Buttons */}
@@ -343,6 +358,7 @@ const ProductCreateForm: React.FC<ProductFormProps> = ({
               : "Create Product"}
           </Button>
         </div>
+        
       </form>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ID } from "appwrite";
 import { databases, getFilePreview } from "@/lib/appwrite";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDownIcon, ChevronRightIcon, Plus } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, Plus, Trash2 } from "lucide-react";
 import { Product } from "@/types/product";
 import { MediaManager } from "@/components/media/MediaManager";
 

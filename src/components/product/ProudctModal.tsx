@@ -51,6 +51,11 @@ export const ProductModel = ({ onClose, onSelect, selectedIds = [] }: ProductMod
     const selectedDocs = products.filter((p) => selectedProducts.includes(p.$id))
     const selected: Product[] = selectedDocs.map((doc) => ({
       $id: doc.$id,
+      $collectionId: doc.$collectionId,
+      $databaseId: doc.$databaseId,
+      $createdAt: doc.$createdAt,
+      $updatedAt: doc.$updatedAt,
+      $permissions: doc.$permissions,
       name: doc.name,
       description: doc.description,
       rating: doc.rating,
@@ -66,7 +71,7 @@ export const ProductModel = ({ onClose, onSelect, selectedIds = [] }: ProductMod
       tags: doc.tags ?? [],
       ingredients: doc.ingredients ?? [],
       slug: doc.slug ?? "",
-      collections:doc.collections ?? [],
+      collections: doc.collections ?? [],
     }))
     onSelect(selected) // Send selected product objects
     onClose()          // Close the modal

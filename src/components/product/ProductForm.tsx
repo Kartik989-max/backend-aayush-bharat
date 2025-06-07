@@ -126,15 +126,24 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
     
     setFormData(prev => ({
       ...prev,
-      productVideo: [...(prev.productVideo || []), ...files.map(f => f.fileId)]
+      productVideo: [...(prev.productVideo || []), ...files.map(f => f.url)]
     }));
+    
     setShowMediaManager(false);
   };
 
-  const handleRemoveVideo = (videoId: string) => {
+  const handleRemoveVideo = (videoUrl: string) => {
     setFormData(prev => ({
       ...prev,
-      productVideo: prev.productVideo?.filter(id => id !== videoId) || []
+      productVideo: prev.productVideo?.filter(url => url !== videoUrl) || []
+    }));
+  };
+
+  const handleCollectionChange = (value: string) => {
+    console.log('Selected collection:', value); // Debug log
+    setFormData(prev => ({
+      ...prev,
+      collections: [value] // Store only the selected collection ID
     }));
   };
 
@@ -143,6 +152,18 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
     setError(null);
 
     try {
+      // Validate months for all variants
+      const invalidVariant = formData.variants.find(v => v.months > 12);
+      if (invalidVariant) {
+        toast.error('Months cannot be more than 12');
+        return;
+      }
+
+      // Ensure collections is an array and not empty
+      const collections = Array.isArray(formData.collections) && formData.collections.length > 0 
+        ? formData.collections 
+        : [];
+
       // Prepare product data
       const productData = {
         name: formData.name,
@@ -151,10 +172,15 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         tags: formData.tags,
         slug: formData.slug,
         ingredients: formData.ingredients,
-        collections: formData.collections,
+        collections: collections,
         productVideo: formData.productVideo || [],
-        variants: formData.variants
+        variants: formData.variants.map(variant => ({
+          ...variant,
+          months: Math.min(Number(variant.months), 12)
+        }))
       };
+
+      console.log('Submitting product data:', productData); // Debug log
 
       let productId;
       
@@ -178,7 +204,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             productId: productId,
             price: Number(variant.price),
             weight: Number(variant.weight),
-            months: Number(variant.months),
+            months: Math.min(Number(variant.months), 12),
             sale_price: Number(variant.sale_price),
             stock: Number(variant.stock),
             image: variant.image || "",
@@ -186,10 +212,8 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           };
 
           if (variant.$id) {
-            // Update existing variant
             return productService.updateVariant(variant.$id, variantData);
           } else {
-            // Create new variant
             return createDocument(
               process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
               variantData
@@ -209,7 +233,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         slug: productData.slug,
         ingredients: productData.ingredients,
         variants: formData.variants,
-        collections: productData.collections,
+        collections: collections,
         productVideo: productData.productVideo
       };
 
@@ -274,8 +298,8 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         <div className="space-y-2">
           <Label htmlFor="collections">Collection</Label>
           <Select
-            value={formData.collections[0] || ''}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, collections: [value] }))}
+            value={formData.collections?.[0] || ''}
+            onValueChange={handleCollectionChange}
             disabled={loading}
           >
             <SelectTrigger>
@@ -343,22 +367,61 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         />
       </div>
 
+      <Dialog
+        open={showMediaManager}
+        onClose={() => setShowMediaManager(false)}
+        title="Select Videos"
+      >
+        <div 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
+          <MediaManager
+            onSelect={(files) => {
+              if (files.length === 0) return;
+              setFormData(prev => ({
+                ...prev,
+                productVideo: [...(prev.productVideo || []), ...files.map(f => f.url)]
+              }));
+              setShowMediaManager(false);
+            }}
+            onClose={() => setShowMediaManager(false)}
+            allowMultiple={true}
+            open={showMediaManager}
+          />
+        </div>
+      </Dialog>
+
       <Card>
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4">Product Videos</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {formData.productVideo?.map((videoId) => (
-              <div key={videoId} className="relative aspect-video">
+            {formData.productVideo?.map((videoUrl) => (
+              <div key={videoUrl} className="relative aspect-video">
                 <video
-                  src={getFilePreview(videoId)}
+                  src={videoUrl}
                   className="w-full h-full object-cover rounded-md"
                   controls
+                  preload="metadata"
                 />
                 <Button
+                  type="button"
                   variant="destructive"
                   size="icon"
                   className="absolute -top-2 -right-2 h-6 w-6"
-                  onClick={() => handleRemoveVideo(videoId)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleRemoveVideo(videoUrl);
+                  }}
                   disabled={loading}
                 >
                   <X className="h-4 w-4" />
@@ -413,21 +476,6 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           Cancel
         </Button>
       </div>
-
-      <Dialog
-        open={showMediaManager}
-        onClose={() => setShowMediaManager(false)}
-        title="Select Videos"
-      >
-        <div onClick={(e) => e.stopPropagation()}>
-          <MediaManager
-            onSelect={handleMediaSelect}
-            onClose={() => setShowMediaManager(false)}
-            allowMultiple={true}
-            open={showMediaManager}
-          />
-        </div>
-      </Dialog>
     </form>
   );
 }

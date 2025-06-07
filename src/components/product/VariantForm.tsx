@@ -439,8 +439,9 @@ const VariantForm: React.FC<VariantFormProps> = ({
     // Convert numeric fields
     if (typeof value === 'string' && ['price', 'weight', 'sale_price', 'stock', 'months'].includes(field)) {
       const numValue = Number(value) || 0;
-      if (field === 'months' && numValue < 1) {
-        value = 1;
+      if (field === 'months') {
+        // Ensure months is between 1 and 12
+        value = Math.min(Math.max(numValue, 1), 12);
       } else {
         value = numValue;
       }

@@ -9,17 +9,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { ArrowLeft } from 'lucide-react';
+import { use } from 'react';
 
-export default function EditProductPage({ params }: { params: { id: string } }) {
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Unwrap params using React.use()
+  const { id } = use(params);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const data = await productService.getProductWithVariants(params.id);
+        const data = await productService.getProductWithVariants(id);
         setProduct(data);
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -31,12 +35,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     };
 
     fetchProduct();
-  }, [params.id, router]);
+  }, [id, router]);
 
   const handleSubmit = async (formData: Product) => {
     try {
       setSaving(true);
-      await productService.updateProduct(params.id, formData);
+      await productService.updateProduct(id, formData);
       toast.success('Product updated successfully');
       router.push('/dashboard/products');
     } catch (error) {

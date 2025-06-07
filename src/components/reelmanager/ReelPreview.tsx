@@ -2,8 +2,11 @@
 
 import { Trash2, InstagramIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
-interface ReelPreviewProps {  reel?: {
+interface ReelPreviewProps {
+  reel?: {
     id: string;
     title: string;
     reel: string;
@@ -27,13 +30,16 @@ const ReelPreview = ({ reel, onDelete }: ReelPreviewProps) => {
 
   if (!reel) {
     return (
-      <div className="flex justify-center items-center h-[550px] bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-        <p className="text-gray-500 text-lg">No reel added yet</p>
-      </div>
+      <Card className="h-[400px] flex items-center justify-center border-dashed">
+        <CardContent className="p-4">
+          <p className="text-muted-foreground text-base">No reel added yet</p>
+        </CardContent>
+      </Card>
     );
   }
+
   return (
-    <div className="relative group rounded overflow-hidden block h-[550px]">
+    <Card className="relative group overflow-hidden h-[400px]">
       <video
         src={reel.home_reel || reel.reel}
         className="w-full h-full object-cover"
@@ -43,29 +49,31 @@ const ReelPreview = ({ reel, onDelete }: ReelPreviewProps) => {
         playsInline
         preload="metadata"
       />
-      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant="destructive"
+          size="icon"
           onClick={() => handleDelete(reel.id)}
-          className="p-2 bg-white rounded-full hover:bg-gray-100"
+          className="rounded-full h-8 w-8"
         >
-          <Trash2 className="w-5 h-5 text-red-500" />
-        </button>
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
       </div>
       {reel.link && (
         <a
           href={reel.link}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute bottom-12 left-1/2 transform -translate-x-1/2 flex items-center gap-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity text-sm"
         >
-          <InstagramIcon className="text-white text-3xl" />
+          <InstagramIcon className="text-white text-2xl" />
           <span>View on Instagram</span>
         </a>
       )}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-        <h3 className="text-white font-semibold text-lg">{reel.title}</h3>
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+        <h3 className="text-white font-medium text-base truncate">{reel.title}</h3>
       </div>
-    </div>
+    </Card>
   );
 };
 

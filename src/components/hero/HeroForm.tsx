@@ -18,9 +18,8 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
   const [formData, setFormData] = useState<Hero>({
     heading: initialData?.heading || '',
     sub_text: initialData?.sub_text || '',
-    image: initialData?.image || '',
-    video: initialData?.video || '',
-    mobile_image: initialData?.mobile_image || '',
+    desktop_view: initialData?.desktop_view || '',
+    mobile_view: initialData?.mobile_view || '',
     button1: initialData?.button1 || '',
     button1_slug: initialData?.button1_slug || '',
     button2: initialData?.button2 || '',
@@ -36,16 +35,9 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
     const fileUrl = file.url;
     
     if (showMediaManager === 'main') {
-      // Detect if the file is a video based on mime type or file extension
-      const isVideo = file.mimeType?.startsWith('video/') || fileUrl.match(/\.(mp4|webm|mov)$/i);
-      
-      if (isVideo) {
-        setFormData({ ...formData, video: fileUrl, image: '' });
-      } else {
-        setFormData({ ...formData, image: fileUrl, video: '' });
-      }
+      setFormData({ ...formData, desktop_view: fileUrl });
     } else if (showMediaManager === 'mobile') {
-      setFormData({ ...formData, mobile_image: fileUrl });
+      setFormData({ ...formData, mobile_view: fileUrl });
     }
     setShowMediaManager(false);
   };
@@ -61,8 +53,8 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
         throw new Error('Please fill in all required fields');
       }
 
-      if (!formData.image && !formData.video) {
-        throw new Error('Please upload either an image or video for the hero section');
+      if (!formData.desktop_view) {
+        throw new Error('Please upload media for desktop view');
       }
 
       await onSubmit(formData);
@@ -87,10 +79,10 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
         <div className="space-y-6">
           <div>
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Main Media*
+              Main Media* (Image or Video)
             </label>
             <p className="text-[0.8rem] text-muted-foreground mb-4">
-              Upload an image or video for the hero section
+              Upload an image or video for the hero section. Supported video formats: MP4, WebM, MOV
             </p>
             <Button
               type="button"
@@ -98,26 +90,34 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
               variant="outline"
               className="w-full h-32 border-dashed group relative overflow-hidden"
             >
-              {formData.video ? (
-                <video
-                  src={formData.video}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  autoPlay
-                  muted
-                  loop
-                />
-              ) : formData.image ? (
-                <Image
-                  src={formData.image}
-                  alt="Hero image"
-                  fill
-                  className="object-cover transition-transform group-hover:scale-105"
-                />
+              {formData.desktop_view ? (
+                formData.desktop_view.match(/\.(mp4|webm|mov)$/i) ? (
+                  <video
+                    key={formData.desktop_view}
+                    src={formData.desktop_view}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls={false}
+                    onLoadedData={(e) => {
+                      e.currentTarget.play().catch(console.error);
+                    }}
+                  />
+                ) : (
+                  <Image
+                    src={formData.desktop_view}
+                    alt="Hero image"
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                  />
+                )
               ) : (
                 <div className="flex flex-col items-center justify-center">
                   <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
-                    Upload media
+                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors text-center">
+                    Click to upload<br/>image or video
                   </span>
                 </div>
               )}
@@ -135,18 +135,34 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
               variant="outline"
               className="w-48 h-64 border-dashed group relative overflow-hidden"
             >
-              {formData.mobile_image ? (
-                <Image
-                  src={formData.mobile_image}
-                  alt="Mobile preview"
-                  fill
-                  className="object-cover transition-transform group-hover:scale-105"
-                />
+              {formData.mobile_view ? (
+                formData.mobile_view.match(/\.(mp4|webm|mov)$/i) ? (
+                  <video
+                    key={formData.mobile_view}
+                    src={formData.mobile_view}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls={false}
+                    onLoadedData={(e) => {
+                      e.currentTarget.play().catch(console.error);
+                    }}
+                  />
+                ) : (
+                  <Image
+                    src={formData.mobile_view}
+                    alt="Mobile preview"
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                  />
+                )
               ) : (
                 <div className="flex flex-col items-center justify-center">
                   <Plus className="w-8 h-8 mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
                   <span className="text-sm text-center text-muted-foreground group-hover:text-primary transition-colors">
-                    Upload mobile image
+                    Upload mobile<br/>image or video
                   </span>
                 </div>
               )}
@@ -246,12 +262,11 @@ const HeroForm = ({ onSubmit, initialData, onCancel }: HeroFormProps) => {
         </div>
       </div>
 
-      {showMediaManager && (
-        <MediaManager
-          onSelect={handleMediaSelect}
-          onClose={() => setShowMediaManager(false)}
-        />
-      )}
+      <MediaManager
+        open={!!showMediaManager}
+        onSelect={handleMediaSelect}
+        onClose={() => setShowMediaManager(false)}
+      />
 
       <div className="flex items-center justify-end gap-4">
         <Button

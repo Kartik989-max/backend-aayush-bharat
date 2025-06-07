@@ -4,9 +4,8 @@ import { ID } from "appwrite";
 export interface Hero {
   $id?: string;
   heading: string;
-  mobile_image?: string;
-  image?: string;
-  video?: string;
+  desktop_view: string;
+  mobile_view?: string;
   button1: string;
   button1_slug: string;
   button2?: string;
@@ -72,9 +71,8 @@ export class HeroService {
       return response.documents.map(doc => ({
         $id: doc.$id,
         heading: doc.heading,
-        mobile_image: doc.mobile_image,
-        image: doc.image,
-        video: doc.video,
+        desktop_view: doc.desktop_view,
+        mobile_view: doc.mobile_view,
         button1: doc.button1,
         button1_slug: doc.button1_slug,
         button2: doc.button2,
@@ -97,9 +95,8 @@ export class HeroService {
       return {
         $id: doc.$id,
         heading: doc.heading,
-        mobile_image: doc.mobile_image,
-        image: doc.image,
-        video: doc.video,
+        desktop_view: doc.desktop_view,
+        mobile_view: doc.mobile_view,
         button1: doc.button1,
         button1_slug: doc.button1_slug,
         button2: doc.button2,

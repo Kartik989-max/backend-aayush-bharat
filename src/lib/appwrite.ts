@@ -1,4 +1,4 @@
-import { Client, Databases, Storage, Permission, Role, ID, Models, Account } from 'appwrite';
+import { Client, Account, Databases, Storage, Functions, Permission, Role, ID, Models } from 'appwrite';
 
 // Custom error for network issues
 class NetworkError extends Error {
@@ -17,7 +17,7 @@ const checkInternetConnection = () => {
 
 // Ensure endpoint ends with /v1 and is a valid URL
 const getValidEndpoint = () => {
-    const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://backend.aayudhbharat.com/v1';
+    const endpoint = process.env.NEXT_PUBLIC_APPWRITE_URL || 'https://backend.aayudhbharat.com/v1';
     try {
         // Test if it's a valid URL
         new URL(endpoint);
@@ -48,6 +48,7 @@ try {
 const databases = new Databases(client);
 const storage = new Storage(client);
 const account = new Account(client);
+const functions = new Functions(client);
 
 // Wrap database operations with connection check
 const safeDatabaseOperation = async <T>(operation: () => Promise<T>): Promise<T> => {

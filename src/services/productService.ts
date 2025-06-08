@@ -7,10 +7,13 @@ export type { Product, Variants, Collections };
 
 export interface Category extends Models.Document {
   name: string;
+  description: string;
+  sub_text?: string;
 }
 
 export interface Weight extends Models.Document {
-  weight: number;
+  name: string;
+  value: number;
 }
 
 export interface WeightPrice {
@@ -48,7 +51,14 @@ export const productService = {
     );
     return response.documents.map(doc => ({
       $id: doc.$id,
-      name: doc.name as string
+      $collectionId: doc.$collectionId,
+      $databaseId: doc.$databaseId,
+      $createdAt: doc.$createdAt,
+      $updatedAt: doc.$updatedAt,
+      $permissions: doc.$permissions,
+      name: doc.name as string,
+      description: doc.description as string,
+      sub_text: doc.sub_text as string
     }));
   },
 
@@ -70,6 +80,11 @@ export const productService = {
     );
     return response.documents.map(doc => ({
       $id: doc.$id,
+      $collectionId: doc.$collectionId,
+      $databaseId: doc.$databaseId,
+      $createdAt: doc.$createdAt,
+      $updatedAt: doc.$updatedAt,
+      $permissions: doc.$permissions,
       name: doc.name as string,
       value: Number(doc.value)
     }));

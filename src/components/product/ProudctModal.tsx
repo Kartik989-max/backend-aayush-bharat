@@ -62,16 +62,12 @@ export const ProductModel = ({ onClose, onSelect, selectedIds = [] }: ProductMod
       category: doc.category,
       price: doc.price,
       image: doc.image,
-      variants: doc.variants,
-      stock: doc.stock,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-      weight: doc.weight ?? 0,
-      additionalImages: doc.additionalImages ?? [],
-      tags: doc.tags ?? [],
-      ingredients: doc.ingredients ?? [],
-      slug: doc.slug ?? "",
-      collections: doc.collections ?? [],
+      tags: doc.tags || "",
+      slug: doc.slug || "",
+      ingredients: doc.ingredients || "",
+      variants: doc.variants || [],
+      collections: doc.collections || [],
+      productVideo: doc.productVideo || [] // Add this line to include productVideo field
     }))
     onSelect(selected) // Send selected product objects
     onClose()          // Close the modal

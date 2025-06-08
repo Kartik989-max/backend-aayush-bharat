@@ -1,12 +1,13 @@
 // src/store/productSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { productService } from '@/services/productService';
+import { Product } from '@/types/product';
 
 interface ProductState {
-  data: any[]; // Replace `any` with your actual product type
+  data: Product[];
   loading: boolean;
   error: string | null;
-  loaded: boolean; // ✅ Track if data has been fetched already
+  loaded: boolean;
 }
 
 const initialState: ProductState = {
@@ -16,13 +17,11 @@ const initialState: ProductState = {
   loaded: false,
 };
 
-// Async thunk to fetch products
-export const fetchProducts = createAsyncThunk(
+export const fetchProducts = createAsyncThunk<Product[]>(
   'products/fetchProducts',
   async (_, thunkAPI) => {
     try {
-      const response = await axios.get('/api/products'); // Replace with your API endpoint
-      return response.data;
+      return await productService.getProducts();
     } catch (err: any) {
       return thunkAPI.rejectWithValue(err.message);
     }
@@ -45,14 +44,14 @@ const productSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchProducts.fulfilled, (state, action: PayloadAction<any[]>) => {
+      .addCase(fetchProducts.fulfilled, (state, action) => {
         state.data = action.payload;
         state.loading = false;
         state.loaded = true;
       })
-      .addCase(fetchProducts.rejected, (state, action: PayloadAction<any>) => {
+      .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload as string;
       });
   },
 });

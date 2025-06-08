@@ -15,9 +15,23 @@ const checkInternetConnection = () => {
     }
 };
 
+// Ensure endpoint ends with /v1 and is a valid URL
+const getValidEndpoint = () => {
+    const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://backend.aayudhbharat.com/v1';
+    try {
+        // Test if it's a valid URL
+        new URL(endpoint);
+        // Ensure it ends with /v1
+        return endpoint.endsWith('/v1') ? endpoint : `${endpoint}/v1`;
+    } catch (e) {
+        console.warn('Invalid APPWRITE_ENDPOINT, using default');
+        return 'https://backend.aayudhbharat.com/v1';
+    }
+};
+
 const client = new Client()
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
+    .setEndpoint(getValidEndpoint())
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'your-project-id')
 
 const databases = new Databases(client);
 const storage = new Storage(client);
@@ -102,12 +116,16 @@ const getFilePreview = (fileId: string, customBucketId?: string) => {
     if (!fileId) return '';
     
     try {
-        const baseUrl = 'https://backend.aayudhbharat.com/v1';
+        const endpoint = getValidEndpoint();
         const bucketId = customBucketId || process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID;
         const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
         
-        // Include mode=admin in the URL
-        return `${baseUrl}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}&mode=admin`;
+        // Construct URL carefully
+        const url = new URL(`${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view`);
+        url.searchParams.set('project', projectId || '');
+        url.searchParams.set('mode', 'admin');
+        
+        return url.toString();
     } catch (error) {
         console.error('Error generating file preview URL:', error);
         return '';

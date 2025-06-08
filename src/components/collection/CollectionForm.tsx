@@ -84,6 +84,11 @@ const CollectionForm = ({ onSubmit, initialData, onCancel }: CollectionFormProps
     setSelectedProducts(prev => prev.filter(product => product.$id !== productId))
   }
 
+  const handleProductsAdded = (newProducts: Product[]) => {
+    setSelectedProducts(prev => [...prev, ...newProducts])
+    fetchProducts() // Refresh the product list
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
@@ -173,10 +178,7 @@ const CollectionForm = ({ onSubmit, initialData, onCancel }: CollectionFormProps
           onClose={() => setShowProductSelector(false)}
           collection={{ $id: initialData?.$id || '', name: formData.name }}
           products={allProducts}
-          onProductsAdded={() => {
-            fetchProducts()
-            setShowProductSelector(false)
-          }}
+          onProductsAdded={handleProductsAdded}
         />
       )}
     </form>

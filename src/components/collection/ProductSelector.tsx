@@ -15,7 +15,7 @@ interface ProductSelectorProps {
     onClose: () => void
     collection: Collection
     products: Product[]
-    onProductsAdded: () => void
+    onProductsAdded: (selectedProducts: Product[]) => void
 }
 
 interface Collection {
@@ -77,7 +77,10 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
             });
 
             await Promise.all(updates.filter(Boolean));
-            onProductsAdded();
+            
+            // Get the selected products and pass them to the parent
+            const selectedProductsList = products.filter(product => selectedProducts.has(product.$id));
+            onProductsAdded(selectedProductsList);
             onClose();
         } catch (error) {
             console.error('Error adding products to collection:', error);

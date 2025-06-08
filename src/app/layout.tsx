@@ -8,6 +8,7 @@ import '@/styles/quill.css';
 import { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { store } from '@/store/store';
+import { Toaster } from '@/components/ui/toaster';
 
 const mohave = Mohave({ 
   subsets: ['latin'],
@@ -59,6 +60,7 @@ export default function RootLayout({
           <Provider store={store}>
             {children}
             <ToastContainer position="bottom-right" />
+            <Toaster />
           </Provider>
       </body>
     </html>

@@ -101,5 +101,68 @@ export const orderService = {
       'unique()',
       data
     );
+  },
+
+  async calculateShiprocketShipping(data: {
+    pickup_postcode: string;
+    delivery_postcode: string;
+    weight: number;
+    length: number;
+    breadth: number;
+    height: number;
+    cod?: boolean;
+  }) {
+    try {
+      console.log('Sending shipping calculation request:', data);
+      
+      // Use mock API temporarily for testing
+      const useMockAPI = true;
+      const apiUrl = useMockAPI ? '/api/shipping/mock' : '/api/shipping/calculate';
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Failed to calculate shipping: ${response.status} ${errorText}`);
+        throw new Error(`Failed to calculate shipping: ${response.status} ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Shipping calculation response:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('Error calculating shipping:', error);
+      throw error;
+    }
+  },
+
+  async createShiprocketOrder(orderId: string, shipmentData: any) {
+    try {
+      const response = await fetch('/api/shipping/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId,
+          ...shipmentData
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create shipment');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating shipment:', error);
+      throw error;
+    }
   }
 };

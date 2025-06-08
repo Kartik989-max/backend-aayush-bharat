@@ -390,28 +390,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="collections">Collection</Label>
-          <Select
-            value={formData.collections?.[0] || ''}
-            onValueChange={handleCollectionChange}
-            disabled={loading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a collection">
-                {collections.find(c => c.$id === formData.collections?.[0])?.name || 'Select a collection'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {collections.map((collection) => (
-                <SelectItem key={collection.$id} value={collection.$id}>
-                  {collection.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
+   
         <div className="space-y-2">
           <Label htmlFor="tags">Tags</Label>
           <Input

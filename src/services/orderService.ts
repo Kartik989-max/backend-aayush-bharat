@@ -78,9 +78,26 @@ export const orderService = {
   async updateOrderShippingStatus(orderId: string, shipping_status: string): Promise<OrderType> {
     const response = await databases.updateDocument(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+      process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
       orderId,
       { shipping_status }
+    );
+    return response as OrderType;
+  },
+  
+  async updateOrderWithDeliveryCharges(
+    orderId: string, 
+    shipping_status: string, 
+    delivery_charges: number
+  ): Promise<OrderType> {
+    const response = await databases.updateDocument(
+      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+      process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+      orderId,
+      { 
+        shipping_status,
+        delivery_charges
+      }
     );
     return response as OrderType;
   },

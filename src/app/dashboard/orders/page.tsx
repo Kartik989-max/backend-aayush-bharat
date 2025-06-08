@@ -27,9 +27,9 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="p-4">
+    <div className="h-full w-full">
       {loading ? (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full">
           <div className="flex justify-between items-center">
             <Shimmer type="text" className="w-48" />
             <div className="flex gap-4">

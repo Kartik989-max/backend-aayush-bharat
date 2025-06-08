@@ -60,10 +60,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen w-full">
       <Sidebar />
-      <div className="flex-1 pl-64">
-        <main className="p-8">{children}</main>
+      <div className="flex-1 pl-64 overflow-auto">
+        <main className="p-6 h-full">{children}</main>
       </div>
     </div>
   );

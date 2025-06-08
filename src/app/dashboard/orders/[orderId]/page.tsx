@@ -28,6 +28,7 @@ export default function OrderDetailsPage() {
   const { toast } = useToast();
   const [order, setOrder] = useState<OrderType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deliveryCharges, setDeliveryCharges] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [shippingCalculating, setShippingCalculating] = useState(false);
   const [shippingRates, setShippingRates] = useState<any[]>([]);
@@ -53,6 +54,10 @@ export default function OrderDetailsPage() {
         cod: order.payment_type === "COD"
       }));
     }
+    
+    if (order?.delivery_charges) {
+      setDeliveryCharges(order.delivery_charges.toString());
+    }
   }, [order]);
 
   const loadOrder = async () => {
@@ -72,12 +77,29 @@ export default function OrderDetailsPage() {
     
     try {
       setSaving(true);
-      await orderService.updateOrderShippingStatus(order.$id, newStatus);
+      
+      // If status is changed to "shipped", update delivery charges as well
+      if (newStatus === 'shipped' && deliveryCharges) {
+        await orderService.updateOrderWithDeliveryCharges(
+          order.$id, 
+          newStatus, 
+          parseFloat(deliveryCharges)
+        );
+        
+        toast({
+          title: 'Status and delivery charges updated',
+          description: `Order status changed to ${newStatus} with delivery charges of ₹${deliveryCharges}`,
+        });
+      } else {
+        await orderService.updateOrderShippingStatus(order.$id, newStatus);
+        
+        toast({
+          title: 'Status updated',
+          description: `Order status changed to ${newStatus}`,
+        });
+      }
+      
       await loadOrder();
-      toast({
-        title: 'Status updated',
-        description: `Order status changed to ${newStatus}`,
-      });
     } catch (error) {
       console.error('Error updating shipping status:', error);
       toast({
@@ -359,22 +381,37 @@ export default function OrderDetailsPage() {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Update Status</h3>
-                  <Select
-                    value={order.shipping_status || 'pending'}
-                    onValueChange={handleStatusChange}
-                    disabled={saving}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-4">
+                    <Select
+                      value={order.shipping_status || 'pending'}
+                      onValueChange={handleStatusChange}
+                      disabled={saving}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {order.shipping_status === 'shipped' || statusOptions.includes('shipped') ? (
+                      <div>
+                        <Label htmlFor="delivery-charges" className="mb-1">Delivery Charges (₹)</Label>
+                        <Input
+                          id="delivery-charges"
+                          type="number"
+                          value={deliveryCharges}
+                          onChange={(e) => setDeliveryCharges(e.target.value)}
+                          placeholder="Enter delivery charges"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -452,11 +489,10 @@ export default function OrderDetailsPage() {
                   <div className="flex items-center gap-3">
                     <Label htmlFor="cod-select">COD</Label>
                     <Select
-                      id="cod-select"
                       value={shipmentData.cod ? 'true' : 'false'}
                       onValueChange={(value) => handleShipmentDataChange('cod', value)}
                     >
-                      <SelectTrigger className="w-24">
+                      <SelectTrigger id="cod-select" className="w-24">
                         <SelectValue placeholder="COD" />
                       </SelectTrigger>
                       <SelectContent>

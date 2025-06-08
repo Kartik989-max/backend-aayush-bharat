@@ -29,9 +29,24 @@ const getValidEndpoint = () => {
     }
 };
 
-const client = new Client()
-    .setEndpoint(getValidEndpoint())
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'your-project-id')
+// Initialize client with secure defaults and proper error handling
+const client = new Client();
+
+try {
+    client
+        .setEndpoint(getValidEndpoint())
+        .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'your-project-id')
+        // Important: Set secure mode and allow self-signed certificates in development
+        .setSelfSigned(process.env.NODE_ENV === 'development')
+        // Set proper headers for CORS
+        .setHeader('Origin', typeof window !== 'undefined' ? window.location.origin : 'https://admin.aayudhbharat.com');
+} catch (error) {
+    console.error('Failed to initialize Appwrite client:', error);
+    // Initialize with fallback configuration
+    client
+        .setEndpoint('https://backend.aayudhbharat.com/v1')
+        .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'your-project-id');
+}
 
 const databases = new Databases(client);
 const storage = new Storage(client);

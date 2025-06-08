@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { account } from '@/lib/appwrite';
 import { Loader2 } from 'lucide-react';
+import Dashboard from '@/components/dashboard/Dashboard';
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -46,15 +47,5 @@ export default function DashboardPage() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      {user && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Welcome, {user.email}</h2>
-          <p className="text-gray-600">You are logged in as an administrator.</p>
-        </div>
-      )}
-    </div>
-  );
+  return <Dashboard />;
 }

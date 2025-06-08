@@ -292,20 +292,6 @@ const Dashboard = () => {
     }
   ];
 
-  // const monthlyOrdersData = {
-  //   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-  //   datasets: [
-  //     {
-  //       label: 'Monthly Sales (₹)',
-  //       data: orderData.monthlySales,
-  //       borderColor: '#7da09e',
-  //       backgroundColor: '#fff',
-  //       fill: true,
-  //       tension: 0.4,
-  //     },
-  //   ],
-  // };
-
   return (
     <div className="flex-1 space-y-4 p-8">
       <div className="flex items-center justify-between space-y-2">
@@ -443,178 +429,142 @@ const Dashboard = () => {
             </Card>
 
             <Card>
-          <CardHeader>
-            <CardTitle>Monthly Revenue Overview</CardTitle>
-            <CardDescription>Track your revenue trends over the past year</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[400px]">
-            <Line 
-              data={{
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                datasets: [
-                  {
-                    label: 'Monthly Revenue (₹)',
-                    data: monthlyData,
-                    borderColor: '#7da09e',
-                    backgroundColor: 'rgba(125, 160, 158, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                  }
-                ]
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    grid: {
-                      color: 'rgba(255, 255, 255, 0.1)',
-                    },
-                    ticks: {
-                      callback: (value) => `₹${value.toLocaleString()}`
-                    }
-                  },
-                  x: {
-                    grid: {
-                      color: 'rgba(255, 255, 255, 0.1)',
-                    }
-                  }
-                },
-                plugins: {
-                  legend: {
-                    position: 'top'
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `Revenue: ₹${context.parsed.y.toLocaleString()}`;
+              <CardHeader>
+                <CardTitle>Monthly Revenue Overview</CardTitle>
+                <CardDescription>Track your revenue trends over the past year</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[400px]">
+                  <Line 
+                    data={{
+                      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                      datasets: [
+                        {
+                          label: 'Monthly Revenue (₹)',
+                          data: monthlyData,
+                          borderColor: '#7da09e',
+                          backgroundColor: 'rgba(125, 160, 158, 0.1)',
+                          fill: true,
+                          tension: 0.4
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(255, 255, 255, 0.1)',
+                          },
+                          ticks: {
+                            callback: (value) => `₹${value.toLocaleString()}`
+                          }
+                        },
+                        x: {
+                          grid: {
+                            color: 'rgba(255, 255, 255, 0.1)',
+                          }
+                        }
+                      },
+                      plugins: {
+                        legend: {
+                          position: 'top'
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: function(context) {
+                              return `Revenue: ₹${context.parsed.y.toLocaleString()}`;
+                            }
+                          }
+                        }
                       }
-                    }
-                  }
-                }
-              }}
-            />
-          </div>
-          </CardContent>
-        </Card>
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-        {/* Stock Distribution Card */}
-        <Card className="mt-8">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Inventory Stock Analysis</CardTitle>
-              <CardDescription>Distribution of inventory by stock status</CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" className="h-8 text-xs">
-                Chart View
-              </Button>
-              <Button variant="outline" size="sm" className="h-8 text-xs bg-primary/10">
-                Card View
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-lg">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                  <Package className="h-8 w-8 text-green-600" />
+            {/* Stock Distribution Card */}
+            <Card className="mt-8">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Inventory Stock Analysis</CardTitle>
+                  <CardDescription>Distribution of inventory by stock status</CardDescription>
                 </div>
-                <h3 className="text-lg font-semibold text-green-700">In Stock</h3>
-                <p className="text-3xl font-bold text-green-600 mt-2">
-                  {stats.products - stats.lowStockItems - stats.outOfStockItems}
-                </p>
-                <p className="text-sm text-green-600 mt-1">Healthy Stock Levels</p>
-              </div>
-              
-              <div className="flex flex-col items-center justify-center p-6 bg-amber-50 rounded-lg">
-                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <AlertTriangle className="h-8 w-8 text-amber-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-amber-700">Low Stock</h3>
-                <p className="text-3xl font-bold text-amber-600 mt-2">
-                  {stats.lowStockItems}
-                </p>
-                <p className="text-sm text-amber-600 mt-1">Need Attention</p>
-              </div>
-              
-              <div className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg">
-                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                  <XCircle className="h-8 w-8 text-red-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-red-700">Out of Stock</h3>
-                <p className="text-3xl font-bold text-red-600 mt-2">
-                  {stats.outOfStockItems}
-                </p>
-                <p className="text-sm text-red-600 mt-1">Requires Immediate Action</p>
-              </div>
-            </div>
-            
-            <div className="mt-8">
-              <h3 className="text-lg font-medium mb-4">Inventory Actions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link href="/dashboard/inventory">
-                  <Button variant="outline" className="w-full">
-                    <Package className="h-4 w-4 mr-2" />
-                    Manage Inventory
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" className="h-8 text-xs">
+                    Chart View
                   </Button>
-                </Link>
-                <Link href="/dashboard/products/new">
-                  <Button variant="outline" className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add New Product
+                  <Button variant="outline" size="sm" className="h-8 text-xs bg-primary/10">
+                    Card View
                   </Button>
-                </Link>
-                <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Stats
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Inventory Metrics Insights */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                  <h3 className="text-lg font-medium mb-4 text-blue-700">Inventory Health Insights</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-blue-700">Inventory Turnover Estimate:</span>
-                      <span className="font-bold text-blue-800">
-                        {Number((stats.monthlyRevenue / (stats.totalInventoryValue || 1) * 12).toFixed(2))}
-                      </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="flex flex-col items-center justify-center p-6 bg-green-50 rounded-lg">
+                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                      <Package className="h-8 w-8 text-green-600" />
                     </div>
-                    <p className="text-sm text-blue-600">
-                      {(stats.monthlyRevenue / (stats.totalInventoryValue || 1) * 12) > 4 
-                        ? "Your inventory turnover is healthy, indicating efficient inventory management."
-                        : (stats.monthlyRevenue / (stats.totalInventoryValue || 1) * 12) > 2
-                        ? "Your inventory turnover is average. Consider optimizing slow-moving items."
-                        : "Your inventory turnover is low. Consider promotions for slow-moving products."}
+                    <h3 className="text-lg font-semibold text-green-700">In Stock</h3>
+                    <p className="text-3xl font-bold text-green-600 mt-2">
+                      {stats.products - stats.lowStockItems - stats.outOfStockItems}
                     </p>
-                    
-                    <div className="flex justify-between items-center mt-3">
-                      <span className="text-blue-700">Stock Health:</span>
-                      <span className="font-bold text-blue-800">
-                        {stats.outOfStockItems === 0 && stats.lowStockItems < 5 
-                          ? "Excellent" 
-                          : stats.outOfStockItems === 0 
-                          ? "Good" 
-                          : "Needs Attention"}
-                      </span>
+                    <p className="text-sm text-green-600 mt-1">Healthy Stock Levels</p>
+                  </div>
+                  
+                  <div className="flex flex-col items-center justify-center p-6 bg-amber-50 rounded-lg">
+                    <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                      <AlertTriangle className="h-8 w-8 text-amber-600" />
                     </div>
-                    <p className="text-sm text-blue-600">
-                      {stats.outOfStockItems === 0 && stats.lowStockItems < 5 
-                        ? "Your inventory levels are well maintained across products."
-                        : stats.outOfStockItems === 0 
-                        ? "No out-of-stock items, but watch your low stock products."
-                        : "You have items out of stock that need immediate replenishment."}
+                    <h3 className="text-lg font-semibold text-amber-700">Low Stock</h3>
+                    <p className="text-3xl font-bold text-amber-600 mt-2">
+                      {stats.lowStockItems}
                     </p>
+                    <p className="text-sm text-amber-600 mt-1">Need Attention</p>
+                  </div>
+                  
+                  <div className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg">
+                    <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                      <XCircle className="h-8 w-8 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-red-700">Out of Stock</h3>
+                    <p className="text-3xl font-bold text-red-600 mt-2">
+                      {stats.outOfStockItems}
+                    </p>
+                    <p className="text-sm text-red-600 mt-1">Requires Immediate Action</p>
                   </div>
                 </div>
+                
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium mb-4">Inventory Actions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Link href="/dashboard/inventory">
+                      <Button variant="outline" className="w-full">
+                        <Package className="h-4 w-4 mr-2" />
+                        Manage Inventory
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard/products/new">
+                      <Button variant="outline" className="w-full">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Product
+                      </Button>
+                    </Link>
+                    <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh Stats
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Inventory Trends Card */}
+         
+
+            {/* Inventory Trends Card */}
             <Card className="mt-8 mb-8">
               <CardHeader>
                 <CardTitle>Inventory Trends</CardTitle>

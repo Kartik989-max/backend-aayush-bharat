@@ -5,6 +5,7 @@ import { databases } from '@/lib/appwrite';
 import { Query } from 'appwrite';
 import CategoryForm from '@/components/category/CategoryForm';
 import { toast } from 'react-toastify';
+import { use } from 'react';
 
 interface Category {
   $id: string;
@@ -13,21 +14,23 @@ interface Category {
   image?: string;
 }
 
-export default function EditCategoryPage({ params }: { params: { id: string } }) {
+// In Next.js 15, params are a Promise, so we need to use the 'use' hook to unwrap them
+export default function EditCategoryPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
   const router = useRouter();
   const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCategory();
-  }, [params.id]);
+  }, []);
 
   const fetchCategory = async () => {
     try {
       const response = await databases.listDocuments(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!,
-        [Query.equal('$id', params.id)]
+        [Query.equal('$id', unwrappedParams.id)]
       );
 
       if (response.documents.length > 0) {
@@ -56,7 +59,7 @@ export default function EditCategoryPage({ params }: { params: { id: string } })
       await databases.updateDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!,
-        params.id,
+        unwrappedParams.id,
         {
           name: data.name,
           description: data.description,
@@ -90,4 +93,4 @@ export default function EditCategoryPage({ params }: { params: { id: string } })
       />
     </div>
   );
-} 
+}

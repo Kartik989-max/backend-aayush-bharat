@@ -128,6 +128,7 @@ export default function ProductVideoForm({ productId, onVideoAdded }: ProductVid
               onSelect={handleAddVideo}
               onClose={() => setIsAddingVideo(false)}
               allowMultiple={false}
+              open={isAddingVideo}
             />
           </div>
         </div>

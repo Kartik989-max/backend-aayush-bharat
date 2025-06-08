@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { databases } from '@/lib/appwrite';
-import { Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { Pencil, Trash2, RefreshCw, Plus } from 'lucide-react';
 import CouponForm from '@/components/coupon/CouponForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,21 +36,21 @@ const RenewConfirmationModal = ({ isOpen, onClose, onConfirm, coupon }: RenewMod
   if (!isOpen || !coupon) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-dark-100 p-6 rounded-lg max-w-md w-full mx-4">
-        <h2 className="text-xl font-bold text-light-100 mb-4">Renew Coupon</h2>
-        <p className="text-light-100/70 mb-6">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 shadow-lg">
+        <h2 className="text-xl font-bold mb-4">Renew Coupon</h2>
+        <p className="text-gray-600 mb-6">
           Set a new expiry date for coupon <span className="font-mono font-semibold text-primary">{coupon.coupon_code}</span>
         </p>
         
         <div className="mb-4">
-          <label className="block text-light-100 mb-2">New Expiry Date</label>
+          <label className="block mb-2">New Expiry Date</label>
           <Input
             type="date"
             value={newExpiryDate}
             onChange={(e) => setNewExpiryDate(e.target.value)}
             min={today}
-            className="w-full p-3 rounded-lg bg-dark-200 border border-dark-100 text-light-100"
+            className="w-full"
             required
           />
         </div>
@@ -58,14 +58,15 @@ const RenewConfirmationModal = ({ isOpen, onClose, onConfirm, coupon }: RenewMod
         <div className="flex gap-4">
           <Button 
             onClick={() => onConfirm(newExpiryDate)}
-            className="flex-1 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
+            className="flex-1"
             disabled={!newExpiryDate}
           >
             Renew Coupon
           </Button>
-          <Button variant='secondary'
+          <Button 
+            variant="outline"
             onClick={onClose}
-            className="flex-1 "
+            className="flex-1"
           >
             Cancel
           </Button>
@@ -161,23 +162,32 @@ const CouponsPage = () => {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-light-100">Coupons</h1>
+    <div className="min-h-screen py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-primary">Coupons</h1>
      
      
 
-{showForm ? (<>
- <Button
-        variant='secondary'
-          onClick={() => setShowForm(false)}
-          className=" text-black border-2 px-4 py-2 rounded" > Back to Coupon List </Button>
+     
 
-</>):(<> <Button
-        variant='secondary'
-          onClick={() => setShowForm(true)}
-          className=" text-black border-2 px-4 py-2 rounded" > Add Coupon </Button>
-</>)}
+{showForm ? (
+  <Button
+    variant="outline"
+    onClick={() => setShowForm(false)}
+    className="flex items-center gap-2"
+  >
+    Back to Coupon List
+  </Button>
+) : (
+  <Button 
+    onClick={() => setShowForm(true)}
+    className="flex items-center gap-2"
+  >
+    <Plus className="w-4 h-4" />
+    Add Coupon
+  </Button>
+)}
 
         
 
@@ -340,6 +350,7 @@ const CouponsPage = () => {
         onConfirm={(newDate) => renewCoupon && handleRenew(renewCoupon.$id, newDate)}
         coupon={renewCoupon}
       />
+      </div>
     </div>
   );
 };

@@ -1,22 +1,28 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { account } from '@/lib/appwrite';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated) {
+    const checkAuth = async () => {
+      try {
+        // Try to get the current session
+        await account.get();
         router.push('/dashboard');
-      } else {
+      } catch (error) {
         router.push('/login');
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, [isLoading, isAuthenticated, router]);
+    };
+
+    checkAuth();
+  }, [router]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-dark-100">

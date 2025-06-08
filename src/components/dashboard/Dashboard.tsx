@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import CountUp from 'react-countup';
 import { orderService } from '@/services/orderService';
-import { listDocuments } from '@/lib/appwrite';
-import { useAuth } from '@/contexts/AuthContext';
+import { listDocuments, account } from '@/lib/appwrite';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, LogOut, TrendingUp, ShoppingCart, Package, Layers, AlertTriangle, XCircle } from 'lucide-react';
@@ -36,7 +35,7 @@ ChartJS.register(
 );
 
 const Dashboard = () => {
-  const { currentUser, logout } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const [stats, setStats] = useState({
     products: 0,
@@ -52,11 +51,27 @@ const Dashboard = () => {
   const [monthlyData, setMonthlyData] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    if (!currentUser) {
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
       router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
-  }, [currentUser, router]);
+  };
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const userData = await account.get();
+        setUser(userData);
+      } catch (error) {
+        router.push('/login');
+      }
+    };
+    
+    checkAuth();
+  }, [router]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -102,7 +117,7 @@ const Dashboard = () => {
     fetchStats();
   }, []);
 
-  if (!currentUser) {
+  if (!user) {
     return null;
   }
 
@@ -176,7 +191,7 @@ const Dashboard = () => {
           <Button 
             variant="outline" 
             className="gap-2"
-            onClick={logout}
+            onClick={handleLogout}
           >
             <LogOut className="w-4 h-4" />
             Logout

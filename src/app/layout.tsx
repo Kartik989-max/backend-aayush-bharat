@@ -5,7 +5,6 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './globals.css';
 import '@/styles/quill.css';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
 import { store } from '@/store/store';
@@ -57,12 +56,10 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body>
-        <AuthProvider>
           <Provider store={store}>
             {children}
             <ToastContainer position="bottom-right" />
           </Provider>
-        </AuthProvider>
       </body>
     </html>
   );

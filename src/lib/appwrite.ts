@@ -1,4 +1,4 @@
-import { Client, Databases, Storage, Permission, Role, ID, Models } from 'appwrite';
+import { Client, Databases, Storage, Permission, Role, ID, Models, Account } from 'appwrite';
 
 // Custom error for network issues
 class NetworkError extends Error {
@@ -21,6 +21,7 @@ const client = new Client()
 
 const databases = new Databases(client);
 const storage = new Storage(client);
+const account = new Account(client);
 
 // Wrap database operations with connection check
 const safeDatabaseOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -175,7 +176,8 @@ const handleNetworkError = async <T>(operation: () => Promise<T>): Promise<T> =>
 export { 
     client, 
     databases, 
-    storage, 
+    storage,
+    account,
     createDocument,
     listDocuments,
     deleteDocument,

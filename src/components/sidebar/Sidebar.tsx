@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -16,14 +16,26 @@ import {
   ScrollText,
   Film
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
+import { account } from '@/lib/appwrite';
+import { toast } from 'react-toastify';
 
 const Sidebar = () => {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
+      toast.success('Logged out successfully');
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to logout');
+    }
+  };
 
   const navigation = [
     {
@@ -31,11 +43,6 @@ const Sidebar = () => {
       href: '/dashboard',
       icon: LayoutDashboard,
     },
-    // {
-    //   name: 'Hero Section',
-    //   href: '/dashboard/hero',
-    //   icon: Image,
-    // },
     {
       name: 'Products',
       href: '/dashboard/products',
@@ -71,21 +78,16 @@ const Sidebar = () => {
       href: '/dashboard/orders',
       icon: ShoppingBag,
     },
-    // {
-    //   name: 'Blog',
-    //   href: '/dashboard/blog',
-    //   icon: PenSquare,
-    // },
     {
       name: 'Coupons',
       href: '/dashboard/coupons',
       icon: Ticket,
     },
-    // {
-    //   name: 'Top Strip',
-    //   href: '/dashboard/top-strip',
-    //   icon: ScrollText,
-    // },
+    {
+      name: 'Contact Queries',
+      href: '/dashboard/contact-queries',
+      icon: ScrollText,
+    },
   ];
 
   return (
@@ -120,7 +122,7 @@ const Sidebar = () => {
         <Button 
           variant="ghost"
           className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={logout}
+          onClick={handleLogout}
         >
           <LogOut className="w-5 h-5" />
           <span>Logout</span>

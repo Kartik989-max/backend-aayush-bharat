@@ -14,7 +14,8 @@ import { AlertCircle, Plus, X } from 'lucide-react';
 import VariantForm from './VariantForm';
 import { MediaManager } from '../media/MediaManager';
 import { Dialog } from '../ui/dialog';
-import { createDocument, getFilePreview } from '@/lib/appwrite';
+import { createDocument, getFilePreview, databases } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 import {
   Select,
   SelectContent,
@@ -44,6 +45,11 @@ interface Variant {
   additionalImages: string[];
 }
 
+interface VideoData {
+  fileId: string;
+  url: string;
+}
+
 interface ProductFormData {
   name: string;
   description: string;
@@ -52,7 +58,7 @@ interface ProductFormData {
   slug: string;
   ingredients: string;
   collections: string[];
-  productVideo: string[];
+  productVideo: VideoData[];
   variants: Variant[];
 }
 
@@ -76,7 +82,10 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
       additionalImages: v.additionalImages || []
     })) || [],
     collections: initialData?.collections || [],
-    productVideo: initialData?.productVideo || []
+    productVideo: initialData?.productVideo?.map(videoId => ({
+      fileId: videoId,
+      url: getFilePreview(videoId)
+    })) || []
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -121,22 +130,92 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
     }));
   };
 
-  const handleMediaSelect = (files: { fileId: string; url: string }[]) => {
+  const handleMediaSelect = async (files: { fileId: string; url: string }[]) => {
     if (files.length === 0) return;
     
-    setFormData(prev => ({
-      ...prev,
-      productVideo: [...(prev.productVideo || []), ...files.map(f => f.url)]
-    }));
+    try {
+      // Create product_video relationship for each video
+      const videoPromises = files.map(async (file) => {
+        const videoData = {
+          productId: initialData?.$id || '', // Will be updated after product creation
+          videos: [file.url] // Use the exact URL from MediaManager
+        };
+        
+        const result = await createDocument(
+          process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_VIDEO_COLLECTION_ID!,
+          videoData
+        );
+        
+        return {
+          fileId: result.$id,
+          url: file.url // Use the exact URL from MediaManager
+        };
+      });
+
+      const newVideos = await Promise.all(videoPromises);
+      
+      setFormData(prev => ({
+        ...prev,
+        productVideo: [...prev.productVideo, ...newVideos]
+      }));
+    } catch (error) {
+      console.error('Error saving videos:', error);
+      toast.error('Failed to save videos');
+    }
     
     setShowMediaManager(false);
   };
 
-  const handleRemoveVideo = (videoUrl: string) => {
-    setFormData(prev => ({
-      ...prev,
-      productVideo: prev.productVideo?.filter(url => url !== videoUrl) || []
-    }));
+  const handleRemoveVideo = async (videoId: string) => {
+    try {
+      // For existing videos, we need to find the product_video relationship first
+      if (initialData?.$id) {
+        // Query to find the product_video relationship
+        const response = await databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_VIDEO_COLLECTION_ID!,
+          [
+            Query.equal('productId', initialData.$id)
+          ]
+        );
+
+        // Find the document that contains the video
+        const videoDoc = response.documents.find(doc => 
+          Array.isArray(doc.videos) && doc.videos.includes(videoId)
+        );
+
+        if (videoDoc) {
+          // Update the videos array to remove the video
+          const updatedVideos = videoDoc.videos.filter((v: string) => v !== videoId);
+          
+          if (updatedVideos.length === 0) {
+            // If no videos left, delete the document
+            await databases.deleteDocument(
+              process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+              process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_VIDEO_COLLECTION_ID!,
+              videoDoc.$id
+            );
+          } else {
+            // Otherwise update the document with remaining videos
+            await databases.updateDocument(
+              process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+              process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_VIDEO_COLLECTION_ID!,
+              videoDoc.$id,
+              { videos: updatedVideos }
+            );
+          }
+        }
+      }
+
+      // Update the form state
+      setFormData(prev => ({
+        ...prev,
+        productVideo: prev.productVideo.filter(v => v.fileId !== videoId)
+      }));
+    } catch (error) {
+      console.error('Error removing video:', error);
+      toast.error('Failed to remove video');
+    }
   };
 
   const handleCollectionChange = (value: string) => {
@@ -173,7 +252,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         slug: formData.slug,
         ingredients: formData.ingredients,
         collections: collections,
-        productVideo: formData.productVideo || [],
+        productVideo: formData.productVideo.map(v => v.fileId),
         variants: formData.variants.map(variant => ({
           ...variant,
           months: Math.min(Number(variant.months), 12)
@@ -182,7 +261,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
 
       console.log('Submitting product data:', productData); // Debug log
 
-      let productId;
+      let productId: string;
       
       if (initialData?.$id) {
         // Update existing product
@@ -195,6 +274,19 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           productData
         );
         productId = result.$id;
+
+        // Update product_video relationships with the new productId
+        if (formData.productVideo.length > 0) {
+          const updatePromises = formData.productVideo.map(video => 
+            databases.updateDocument(
+              process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+              process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_VIDEO_COLLECTION_ID!,
+              video.fileId,
+              { productId }
+            )
+          );
+          await Promise.all(updatePromises);
+        }
       }
 
       // Handle variants
@@ -303,7 +395,9 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             disabled={loading}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a collection" />
+              <SelectValue placeholder="Select a collection">
+                {collections.find(c => c.$id === formData.collections?.[0])?.name || 'Select a collection'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {collections.map((collection) => (
@@ -387,11 +481,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           <MediaManager
             onSelect={(files) => {
               if (files.length === 0) return;
-              setFormData(prev => ({
-                ...prev,
-                productVideo: [...(prev.productVideo || []), ...files.map(f => f.url)]
-              }));
-              setShowMediaManager(false);
+              handleMediaSelect(files);
             }}
             onClose={() => setShowMediaManager(false)}
             allowMultiple={true}
@@ -404,10 +494,10 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold mb-4">Product Videos</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {formData.productVideo?.map((videoUrl) => (
-              <div key={videoUrl} className="relative aspect-video">
+            {formData.productVideo?.map((video) => (
+              <div key={video.fileId} className="relative aspect-video">
                 <video
-                  src={videoUrl}
+                  src={video.url}
                   className="w-full h-full object-cover rounded-md"
                   controls
                   preload="metadata"
@@ -420,7 +510,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleRemoveVideo(videoUrl);
+                    handleRemoveVideo(video.fileId);
                   }}
                   disabled={loading}
                 >

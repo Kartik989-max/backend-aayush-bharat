@@ -24,6 +24,11 @@ import {
   SelectValue,
 } from "../ui/select";
 
+const BUCKET_IDS = {
+  video: "68447dfa00141d2b6986",
+  image: "682762c0001ebf72e7f5"
+} as const;
+
 interface Category {
   $id: string;
   name: string;
@@ -84,7 +89,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
     collections: initialData?.collections || [],
     productVideo: initialData?.productVideo?.map(videoId => ({
       fileId: videoId,
-      url: getFilePreview(videoId)
+      url: videoId // Use the URL directly since it's already in the correct format
     })) || []
   });
 
@@ -138,7 +143,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
       const videoPromises = files.map(async (file) => {
         const videoData = {
           productId: initialData?.$id || '', // Will be updated after product creation
-          videos: [file.url] // Use the exact URL from MediaManager
+          videos: [file.url] // Store the video URL
         };
         
         const result = await createDocument(
@@ -147,8 +152,8 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         );
         
         return {
-          fileId: result.$id,
-          url: file.url // Use the exact URL from MediaManager
+          fileId: result.$id, // Store the relationship document ID
+          url: file.url
         };
       });
 
@@ -181,12 +186,12 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
 
         // Find the document that contains the video
         const videoDoc = response.documents.find(doc => 
-          Array.isArray(doc.videos) && doc.videos.includes(videoId)
+          Array.isArray(doc.videos) && doc.videos.some((url: string) => url.includes(videoId))
         );
 
         if (videoDoc) {
           // Update the videos array to remove the video
-          const updatedVideos = videoDoc.videos.filter((v: string) => v !== videoId);
+          const updatedVideos = videoDoc.videos.filter((v: string) => !v.includes(videoId));
           
           if (updatedVideos.length === 0) {
             // If no videos left, delete the document
@@ -252,14 +257,12 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         slug: formData.slug,
         ingredients: formData.ingredients,
         collections: collections,
-        productVideo: formData.productVideo.map(v => v.fileId),
+        productVideo: formData.productVideo.map(v => v.fileId), // Store the relationship document IDs
         variants: formData.variants.map(variant => ({
           ...variant,
           months: Math.min(Number(variant.months), 12)
         }))
       };
-
-      console.log('Submitting product data:', productData); // Debug log
 
       let productId: string;
       
@@ -326,7 +329,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         ingredients: productData.ingredients,
         variants: formData.variants,
         collections: collections,
-        productVideo: productData.productVideo
+        productVideo: formData.productVideo.map(v => v.fileId) // Use the relationship document IDs
       };
 
       onSubmit(product);

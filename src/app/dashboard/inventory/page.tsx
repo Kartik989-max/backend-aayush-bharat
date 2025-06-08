@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDownIcon, ChevronRightIcon, PackageIcon } from "lucide-react";
+import { Shimmer } from "@/components/ui/shimmer";
 
 interface Variant {
   $id: string;
@@ -224,32 +225,7 @@ export default function InventoryPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              // Loading state with Skeleton
-              [...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-5 w-[200px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-[100px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-[50px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-[80px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-[50px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-5 w-[100px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-9 w-[120px]" />
-                  </TableCell>
-                </TableRow>
-              ))
+              <Shimmer type="table" count={5} />
             ) : (
               items.map((item) => (
                 <React.Fragment key={item.$id}>

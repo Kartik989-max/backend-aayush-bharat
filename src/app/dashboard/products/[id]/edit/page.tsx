@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { ArrowLeft } from 'lucide-react';
 import { use } from 'react';
+import { Shimmer } from "@/components/ui/shimmer";
 
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -54,8 +55,12 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   if (loading) {
     return (
       <div className="container mx-auto py-6">
-        <div className="flex items-center justify-center h-[50vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <Shimmer type="text" className="w-48" />
+            <Shimmer type="button" />
+          </div>
+          <Shimmer type="card" count={3} />
         </div>
       </div>
     );

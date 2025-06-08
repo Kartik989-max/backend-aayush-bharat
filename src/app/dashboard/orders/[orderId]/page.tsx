@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Shimmer } from "@/components/ui/shimmer";
 
 const statusOptions = [
   'pending',
@@ -57,13 +58,10 @@ export default function OrderDetailsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="relative inline-flex">
-          <div className="w-12 h-12 bg-primary rounded-full opacity-75 animate-ping"></div>
-          <div className="w-12 h-12 bg-primary rounded-full absolute inset-0 animate-pulse"></div>
-        </div>
-        <div className="text-xl font-semibold text-primary animate-pulse">
-          Loading Order Details...
+      <div className="p-8">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <Shimmer type="button" className="w-32" />
+          <Shimmer type="card" count={2} />
         </div>
       </div>
     );

@@ -7,8 +7,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card,CardContent} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Shimmer } from "@/components/ui/shimmer";
 
-  import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { fetchCategories } from '@/store/slices/categorySlice';
 import { RootState, AppDispatch } from '@/store/store';
 
@@ -110,10 +111,13 @@ useEffect(() => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-200 flex items-center justify-center">
-        <div className="relative inline-flex">
-          <div className="w-12 h-12 bg-primary rounded-full opacity-75 animate-ping"></div>
-          <div className="w-12 h-12 bg-primary rounded-full absolute inset-0 animate-pulse"></div>
+      <div className="min-h-screen bg-dark-200 p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <Shimmer type="text" className="w-48" />
+            <Shimmer type="button" />
+          </div>
+          <Shimmer type="table" count={5} />
         </div>
       </div>
     );

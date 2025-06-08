@@ -6,6 +6,7 @@ import { Table, TableHead, TableRow, TableCell, TableBody } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Shimmer } from '@/components/ui/shimmer';
 
 interface ContactQuery {
   $id: string;
@@ -70,7 +71,10 @@ const ContactQueriesPage = () => {
       </div>
 
       {loading ? (
-        <Skeleton className="h-10 w-full mb-4" />
+        <div className="space-y-6">
+          <Shimmer type="text" className="w-48" />
+          <Shimmer type="table" count={5} />
+        </div>
       ) : filteredQueries.length === 0 ? (
         <div className="text-center text-muted-foreground">No contact queries found.</div>
       ) : (

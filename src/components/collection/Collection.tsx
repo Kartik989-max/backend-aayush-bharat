@@ -8,6 +8,17 @@ import Image from 'next/image'
 import { Query } from 'appwrite'
 import { Button } from '../ui/button'
 import { Product } from '@/types/product'
+import { Shimmer } from "@/components/ui/shimmer";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+
 interface Collection {
   $id: string
   name: string
@@ -149,179 +160,98 @@ const Collection = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="relative inline-flex">
-          <div className="w-12 h-12 bg-primary rounded-full opacity-75 animate-ping"></div>
-          <div className="w-12 h-12 bg-primary rounded-full absolute inset-0 animate-pulse"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Shimmer type="text" className="w-48" />
+          <Shimmer type="button" />
         </div>
-        <div className="text-xl font-semibold text-primary animate-pulse">
-          Loading Collections...
-        </div>
+        <Shimmer type="table" count={5} />
       </div>
-    )
+    );
   }
 
   
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-bold text-light-100">Collections</h1>
-
-{showForm ? (<><Button
-          onClick={() => setShowForm(false)}
-          className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
-        >
-          Back to Collection
-        </Button></>):(<>
-     
-
-        <Button
-          onClick={() =>{ setShowForm(true); setSelectedCollection(null)}}
-          className="bg-black text-white px-4 py-2 rounded hover:text-black hover:bg-gray-300"
-        >
-          Add Collection
-        </Button>
-           </>)}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Collections</h1>
+        {showForm ? (
+          <Button
+            onClick={() => setShowForm(false)}
+            variant="outline"
+          >
+            Back to Collections
+          </Button>
+        ) : (
+          <Button
+            onClick={() => { setShowForm(true); setSelectedCollection(null) }}
+            variant="default"
+          >
+            Add Collection
+          </Button>
+        )}
       </div>
 
       {showForm && (
-        <CollectionForm
-          onSubmit={handleFormSubmit}
-          initialData={selectedCollection}
-          onCancel={() => {
-            setShowForm(false)
-            setSelectedCollection(null)
-          }}
-        />
+        <Card>
+          <CardContent className="p-6">
+            <CollectionForm
+              onSubmit={handleFormSubmit}
+              initialData={selectedCollection}
+              onCancel={() => {
+                setShowForm(false)
+                setSelectedCollection(null)
+              }}
+            />
+          </CardContent>
+        </Card>
       )}
 
-
-{!showForm && (
-      <div className="overflow-x-auto border rounded-lg">
-
-  <table className=' min-w-full text-sm text-left border-separate border-spacing-y-2'>
- <thead className="bg-gray-50 text-muted-foreground">
-            <tr>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Products</th>
-              <th className="px-4 py-2">Description</th>
-              <th className="px-4 py-2 ">Actions</th>
-            </tr>
-          </thead>
-            <tbody>
-            {collections.map((collection) => (
-              <tr key={collection.$id} className="bg-white rounded-md shadow-sm">
-                <td className="px-4 py-3 flex items-center gap-3">
-                  
-                  <span>{collection.name}</span>
-                </td>
-                <td className="px-4 py-3">{collection.products.length} Total</td>
-                <td className="px-4 py-3">{collection.description}</td>
-                <td className="px-4 py-3">
-                   <div className="inline-flex gap-2 justify-end">
-                <Button
-                  onClick={() => handleEdit(collection)}
-                  className="p-1 text-blue-500 hover:text-blue-700"
-                  title="Edit"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={() => setDeleteId(collection.$id)}
-                  className="p-1 text-red-500 hover:text-red-700"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-                </td>
-              </tr>
-      
-            ))}
-          </tbody>
-
-  </table>
-
-
-
-        {/* {collections.map((collection) => {
-          const collectionProducts = getCollectionProducts(collection.$id)
-          
-          return (
-            <div 
-              key={collection.$id} 
-              className="bg-dark-100 p-4 rounded-lg cursor-pointer"
-              onClick={() => setViewCollection(collection)}
-            >
-              <h3 className="text-xl font-semibold mb-2 text-light-100">{collection.name}</h3>
-              <p className="text-light-100/70 mb-4">{collection.description}</p>
-              
-              {collectionProducts.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-light-100/80 mb-2">
-                    Products in this collection ({collectionProducts.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {collectionProducts.slice(0, 4).map(product => (
-                      <div key={product.$id} className="relative group">
-                        <Image
-                          src={getImagePreview(product.image).toString()}
-                          alt={product.name}
-                          width={50}
-                          height={50}
-                          className="rounded"
-                        />
-                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
-                          <span className="text-xs text-white text-center px-1">
-                            {product.name}
-                          </span>
-                        </div>
+      {!showForm && (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Products</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {collections.map((collection) => (
+                  <TableRow key={collection.$id}>
+                    <TableCell className="font-medium">{collection.name}</TableCell>
+                    <TableCell>{collection.products.length} Total</TableCell>
+                    <TableCell>{collection.description}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          onClick={() => handleEdit(collection)}
+                          variant="ghost"
+                          size="icon"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => setDeleteId(collection.$id)}
+                          variant="ghost"
+                          size="icon"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                    ))}
-                    {collectionProducts.length > 4 && (
-                      <div className="w-[50px] h-[50px] bg-dark-200 rounded flex items-center justify-center">
-                        <span className="text-xs text-light-100">
-                          +{collectionProducts.length - 4}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleEdit(collection)}
-                  className="p-1 text-blue-500 hover:text-blue-700"
-                  title="Edit"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={() => setDeleteId(collection.$id)}
-                  className="p-1 text-red-500 hover:text-red-700"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )
-        })} */}
-      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
-
-
-
- 
-
-      {/* <CollectionView
-        isOpen={viewCollection !== null}
-        onClose={() => setViewCollection(null)}
-        collection={viewCollection}
-        products={products}
-        onProductRemoved={fetchProducts}
-      /> */}
 
       <DeleteConfirmationModal
         isOpen={deleteId !== null}

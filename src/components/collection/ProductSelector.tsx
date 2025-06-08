@@ -4,7 +4,11 @@ import { X } from 'lucide-react'
 import Image from 'next/image'
 import { databases } from '@/lib/appwrite'
 import { Button } from '../ui/button'
-import { Product, Collections } from '@/types/product'
+import { Product } from '@/types/product'
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
+import { Shimmer } from "@/components/ui/shimmer";
+import { Badge } from "@/components/ui/badge";
 
 interface ProductSelectorProps {
     isOpen: boolean
@@ -15,7 +19,7 @@ interface ProductSelectorProps {
 }
 
 interface Collection {
-    $id: Collections
+    $id: string
     name: string
 }
 
@@ -87,18 +91,28 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-dark-100 p-6 rounded-lg max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-light-100">Add Products to {collection.name}</h2>
-                    <button onClick={onClose} className="text-light-100 hover:text-primary">
+        <Dialog open={isOpen} onClose={onClose}>
+            <div className="fixed inset-0 z-50 bg-black/50" />
+            <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-bold">Add Products to {collection.name}</h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Select products to add to this collection
+                        </p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={onClose}>
                         <X className="w-6 h-6" />
-                    </button>
+                    </Button>
                 </div>
 
                 {loading ? (
-                    <div className="flex justify-center items-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <div className="space-y-6 py-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {[...Array(8)].map((_, i) => (
+                                <Shimmer key={i} type="card" />
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     <>
@@ -106,91 +120,103 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
                             {availableProducts.map(product => {
                                 const mainVariant = product.variants[0] || {};
                                 return (
-                                    <div 
+                                    <Card 
                                         key={product.$id} 
-                                        className={`bg-dark-200 p-4 rounded-lg cursor-pointer border-2 ${
-                                            selectedProducts.has(product.$id) ? 'border-primary' : 'border-transparent'
+                                        className={`cursor-pointer transition-all ${
+                                            selectedProducts.has(product.$id) 
+                                                ? 'ring-2 ring-primary' 
+                                                : 'hover:ring-2 hover:ring-primary/50'
                                         }`}
                                         onClick={() => toggleProduct(product.$id)}
                                     >
-                                        <div className="relative aspect-square mb-4">
-                                            <Image
-                                                src={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID}/files/${mainVariant.image}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`}
-                                                alt={product.name}
-                                                fill
-                                                className="rounded-lg object-cover"
-                                            />
-                                        </div>
-                                        <h3 className="text-light-100 font-semibold text-base">{product.name}</h3>
-                                        <p className="text-light-100 font-semibold text-base">₹{mainVariant.price}</p>
-                                        <p className="text-light-100 font-semibold text-base">{mainVariant.stock} in stock</p>
-                                    </div>
+                                        <CardContent className="p-4">
+                                            <div className="relative aspect-square mb-4">
+                                                <Image
+                                                    src={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID}/files/${mainVariant.image}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID}`}
+                                                    alt={product.name}
+                                                    fill
+                                                    className="rounded-lg object-cover"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h3 className="font-semibold">{product.name}</h3>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-medium">₹{mainVariant.price}</span>
+                                                    <Badge variant={mainVariant.stock > 0 ? "default" : "destructive"}>
+                                                        {mainVariant.stock} in stock
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 );
                             })}
                         </div>
 
                         {products.length === 0 && !loading && (
-                            <div className="text-center text-light-100/70 py-8">
+                            <div className="text-center py-8 text-muted-foreground">
                                 All products are already in this collection
                             </div>
                         )}
 
                         {products.length > 0 && (
-                            <div className="flex justify-between items-center mt-6 p-4 bg-dark-200 rounded-lg">
+                            <div className="flex justify-between items-center mt-6 p-4 bg-muted rounded-lg">
                                 <div className="flex items-center gap-2">
-                                    <button
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setCurrentPage(1)}
                                         disabled={currentPage === 1}
-                                        className="px-3 py-1 bg-dark-300 text-white rounded disabled:opacity-50"
                                     >
                                         First
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className="px-3 py-1 bg-dark-300 text-white rounded disabled:opacity-50"
                                     >
                                         Previous
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-light-100">
+                                    <span className="text-sm">
                                         Page {currentPage} of {Math.ceil(totalDocuments / productsPerPage)}
                                     </span>
-                                    <span className="text-sm text-light-100/70">
+                                    <span className="text-sm text-muted-foreground">
                                         ({totalDocuments} total items)
                                     </span>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <button
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalDocuments / productsPerPage)))}
                                         disabled={currentPage >= Math.ceil(totalDocuments / productsPerPage)}
-                                        className="px-3 py-1 bg-dark-300 text-white rounded disabled:opacity-50"
                                     >
                                         Next
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setCurrentPage(Math.ceil(totalDocuments / productsPerPage))}
                                         disabled={currentPage >= Math.ceil(totalDocuments / productsPerPage)}
-                                        className="px-3 py-1 bg-dark-300 text-white rounded disabled:opacity-50"
                                     >
                                         Last
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         )}
 
                         <div className="mt-6 flex justify-end gap-4">
-                            <Button onClick={onClose} variant='destructive'>
+                            <Button onClick={onClose} variant="outline">
                                 Cancel
                             </Button>
                             <Button 
-                            variant='secondary'
                                 onClick={handleAddProducts}
                                 disabled={selectedProducts.size === 0}
-                                className={` ${selectedProducts.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 Add Selected Products ({selectedProducts.size})
                             </Button>
@@ -198,7 +224,7 @@ const ProductSelector = ({ isOpen, onClose, collection, products: initialProduct
                     </>
                 )}
             </div>
-        </div>
+        </Dialog>
     );
 };
 

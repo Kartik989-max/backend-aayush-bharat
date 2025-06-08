@@ -14,6 +14,7 @@ import { Input } from './input';
 import { Button } from './button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
+import { Shimmer } from "@/components/ui/shimmer";
 
 interface DataTableProps<TData extends Record<string, any>> {
   columns: any[];
@@ -82,14 +83,13 @@ export function DataTable<TData extends Record<string, any>>({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className="relative inline-flex">
-          <div className="w-12 h-12 bg-primary rounded-full opacity-75 animate-ping"></div>
-          <div className="w-12 h-12 bg-primary rounded-full absolute inset-0 animate-pulse"></div>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <Shimmer type="text" className="w-64" />
+          <Shimmer type="button" />
+          <Shimmer type="button" />
         </div>
-        <div className="text-xl font-semibold text-primary animate-pulse">
-          Loading Orders...
-        </div>
+        <Shimmer type="table" count={5} />
       </div>
     );
   }

@@ -22,6 +22,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import { Shimmer } from "@/components/ui/shimmer";
 
 ChartJS.register(
   CategoryScale,
@@ -200,19 +201,17 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto">
-        
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[...Array(8)].map((_, index) => (
-              <Card key={index}>
-                <CardHeader className="space-y-0 pb-2">
-                  <Skeleton className="h-4 w-[150px]" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-8 w-[100px]" />
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <Shimmer type="text" className="w-48" />
+              <Shimmer type="button" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <Shimmer key={i} type="card" />
+              ))}
+            </div>
           </div>
         ) : (
           <>

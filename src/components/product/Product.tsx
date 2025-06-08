@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Shimmer } from "@/components/ui/shimmer";
 
 const Product = () => {
   const [products, setProducts] = useState<ProductType[]>([]);
@@ -230,10 +231,12 @@ const Product = () => {
 
   if (loading) {
     return (
-      <div className="p-4 space-y-4">
-        {[...Array(10)].map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full rounded-md" />
-        ))}
+      <div className="p-4 space-y-6">
+        <div className="flex justify-between items-center">
+          <Shimmer type="text" className="w-48" />
+          <Shimmer type="button" />
+        </div>
+        <Shimmer type="table" count={5} />
       </div>
     );
   }

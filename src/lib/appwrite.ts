@@ -171,7 +171,7 @@ const deleteFile = async (fileId: string) => {
 };
 
 const getImageUrlForNextJS = (fileId: string) => {
-    if (!fileId) return '/images/placeholder.jpg';
+    if (!fileId) return '/placeholder.jpg';
     
     try {
         const baseUrl = 'https://backend.aayudhbharat.com/v1';
@@ -182,7 +182,7 @@ const getImageUrlForNextJS = (fileId: string) => {
         return `${baseUrl}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}&mode=admin`;
     } catch (error) {
         console.error('Error generating image URL:', error);
-        return '/images/placeholder.jpg';
+        return '/placeholder.jpg';
     }
 };
 

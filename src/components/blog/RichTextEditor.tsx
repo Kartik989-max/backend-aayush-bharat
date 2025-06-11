@@ -148,11 +148,10 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       <Editor
         editorState={editorState}
         onEditorStateChange={handleEditorChange}
-        toolbar={toolbarOptions}
-        editorClassName="px-4 py-3 min-h-[300px] prose dark:prose-invert max-w-none"
+        toolbar={toolbarOptions}        editorClassName="px-4 py-3 min-h-[300px] prose dark:prose-invert max-w-none"
         placeholder="Write your blog content here..."
         wrapperClassName="rounded-md border border-input"
-        toolbarClassName="sticky top-0 z-10 border-b border-input bg-background flex flex-wrap"
+        toolbarClassName="sticky top-0 z-10 border-b border-input bg-background flex flex-nowrap overflow-x-auto px-2 py-1"
         localization={{
           locale: 'en',
         }}

@@ -122,8 +122,8 @@ export default function BlogForm({ id }: BlogFormProps) {
       setLoading(false);
     }
   };
-
   const handleMediaSelect = (files: { fileId: string; url: string; mimeType?: string }[]) => {
+    // Update the selected media without triggering form submission
     setSelectedMedia(files);
   };
 
@@ -197,9 +197,9 @@ export default function BlogForm({ id }: BlogFormProps) {
               <CardHeader>
                 <CardTitle>Featured Image</CardTitle>
                 <CardDescription>Select an image for your blog</CardDescription>
-              </CardHeader>              <CardContent>
-                <Button 
+              </CardHeader>              <CardContent>                <Button 
                   variant="outline" 
+                  type="button"
                   className="w-full h-[200px] flex flex-col items-center justify-center border-dashed"
                   onClick={() => setShowMediaManager(true)}
                 >

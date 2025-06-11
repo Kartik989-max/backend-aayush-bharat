@@ -23,6 +23,8 @@
   gap: 5px;
   overflow-x: auto;
   white-space: nowrap;
+  min-height: 50px;
+  align-items: center;
 }
 
 .rdw-option-wrapper {
@@ -32,11 +34,12 @@
   padding: 5px;
   border-radius: 3px;
   cursor: pointer;
-  height: 28px;
-  width: 28px;
+  height: 32px;
+  width: 32px;
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: all 0.2s;
 }
 
 .rdw-option-wrapper:hover {
@@ -48,13 +51,19 @@
   border-color: var(--primary);
 }
 
-/* Editor area styles */
+/* Improve editor main content area */
 .rdw-editor-main {
   padding: 1rem;
   min-height: 300px;
   font-family: var(--font-sans);
   color: var(--foreground);
   line-height: 1.5;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.public-DraftEditor-content {
+  min-height: 280px;
 }
 
 /* Fix for toolbar sections to display properly */
@@ -66,23 +75,36 @@
 .rdw-image-wrapper,
 .rdw-history-wrapper {
   display: flex;
-  flex-wrap: wrap;
-  margin-bottom: 5px;
+  flex-wrap: nowrap;
+  margin-bottom: 0;
   margin-right: 10px;
   padding-right: 5px;
   border-right: 1px solid var(--border);
+  align-items: center;
+  height: 40px;
+  min-height: 40px;
 }
 
 /* Fix dropdown styling */
 .rdw-dropdown-wrapper {
-  height: 30px;
+  height: 32px;
   border-radius: 3px;
   margin: 0 3px;
   border: 1px solid var(--border);
   background-color: var(--background);
   display: flex;
   align-items: center;
-  min-width: 80px;
+  min-width: 90px;
+  cursor: pointer;
+}
+
+.rdw-dropdown-optionwrapper {
+  z-index: 100;
+  position: relative;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  border-radius: 3px;
+  margin-top: 5px;
 }
 
 .rdw-editor-main:focus {

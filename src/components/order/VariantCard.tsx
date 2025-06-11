@@ -35,15 +35,15 @@ export function VariantCard({ variant }: VariantCardProps) {
     console.warn('Failed to construct image URL for variant:', variant.$id, 'with image ID:', variant.image);
   }
     return (
-    <Card className="overflow-hidden border border-border hover:shadow-md transition-shadow">
-      <div className="relative aspect-square w-full bg-muted">
+    <Card className="overflow-hidden border border-border h-[350px] hover:shadow-md transition-shadow">
+      <div className="relative aspect-square h-[50%] w-full bg-muted">
         {hasValidImage ? (
           <Image 
             src={imageUrl!} 
             alt="Product Variant" 
             fill 
             className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            // sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             onError={() => setImageError(true)}
           />
         ) : (
@@ -63,8 +63,8 @@ export function VariantCard({ variant }: VariantCardProps) {
           <div className="font-semibold">
             {variant.sale_price ? (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground line-through">₹{variant.price}</span>
-                <span className="text-primary">₹{variant.sale_price}</span>
+                <span className="">₹{variant.sale_price}</span>
+                <span className=" text-sm text-primary line-through">₹{variant.price}</span>
               </div>
             ) : variant.price ? (
               <span>₹{variant.price}</span>
@@ -90,7 +90,7 @@ export function VariantCard({ variant }: VariantCardProps) {
         
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm text-muted-foreground">Product ID:</div>
-          <div className="font-semibold text-xs truncate max-w-[120px]" title={variant.productId || 'N/A'}>
+          <div className="font-semibold text-xs truncate  max-w-[120px]" title={variant.productId || 'N/A'}>
             {variant.productId || 'N/A'}
           </div>
         </div>

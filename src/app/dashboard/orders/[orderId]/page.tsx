@@ -492,13 +492,13 @@ export default function OrderDetailsPage() {
             </CardHeader>
             <CardContent>
               {variantsLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3].map((_, i) => (
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[1, 2, 3,4].map((_, i) => (
                     <Shimmer key={i} type="card" />
                   ))}
                 </div>
               ) : orderVariants.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {orderVariants.map((variant) => (
                     <VariantCard key={variant.$id} variant={variant} />
                   ))}

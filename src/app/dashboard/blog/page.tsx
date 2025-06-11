@@ -31,15 +31,8 @@ import { toast } from 'react-toastify';
 import { FileText, Plus, MoreVertical, Pencil, Trash2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
-
-interface Blog {
-  $id: string;
-  title: string;
-  summary: string;
-  imageUrl?: string;
-  content: string;
-  $createdAt: string;
-}
+import { BlogService, Blog } from '@/appwrite/blog';
+import { config } from '@/config/config';
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -49,40 +42,13 @@ export default function BlogsPage() {
 
   useEffect(() => {
     fetchBlogs();
-  }, []);
-
+  }, []);  const blogService = new BlogService();
+  
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      // Create dummy blog data for UI demonstration
-      const dummyBlogs: Blog[] = [
-        {
-          $id: '1',
-          title: 'Getting Started with Your New Product',
-          summary: 'A comprehensive guide to using your new purchase effectively.',
-          content: '<p>This is a sample blog post content.</p>',
-          imageUrl: '/placeholder.jpg',
-          $createdAt: new Date().toISOString(),
-        },
-        {
-          $id: '2',
-          title: 'Summer Collection 2025',
-          summary: 'Explore our latest collection designed for the summer season.',
-          content: '<p>This is a sample blog post content.</p>',
-          imageUrl: '/placeholder.jpg',
-          $createdAt: new Date(Date.now() - 86400000).toISOString(),
-        },
-        {
-          $id: '3',
-          title: 'Care Tips for Long-lasting Products',
-          summary: 'Learn how to maintain your products to ensure they last longer.',
-          content: '<p>This is a sample blog post content.</p>',
-          imageUrl: '/placeholder.jpg',
-          $createdAt: new Date(Date.now() - 172800000).toISOString(),
-        },
-      ];
-      
-      setBlogs(dummyBlogs);
+      const blogs = await blogService.getBlogs();
+      setBlogs(blogs);
     } catch (error) {
       console.error('Error fetching blogs:', error);
       toast.error('Failed to load blogs');
@@ -90,11 +56,10 @@ export default function BlogsPage() {
       setLoading(false);
     }
   };
-
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this blog?')) {
       try {
-        // Simulate deletion by filtering out the blog
+        await blogService.deleteBlog(id);
         setBlogs(blogs.filter(blog => blog.$id !== id));
         toast.success('Blog deleted successfully');
       } catch (error) {
@@ -105,7 +70,7 @@ export default function BlogsPage() {
   };
 
   const filteredBlogs = blogs.filter(blog => 
-    blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    blog.blog_heading.toLowerCase().includes(searchTerm.toLowerCase()) ||
     blog.summary.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -143,11 +108,10 @@ export default function BlogsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 {filteredBlogs.slice(0, 3).map((blog) => (
                   <Card key={blog.$id} className="overflow-hidden h-full flex flex-col">
-                    <div className="relative h-48 w-full">
-                      {blog.imageUrl ? (
+                    <div className="relative h-48 w-full">                      {blog.image ? (
                         <Image 
-                          src={blog.imageUrl} 
-                          alt={blog.title}
+                          src={`${config.appwriteEndpoint}/storage/buckets/${config.appwriteBlogBucketId}/files/${blog.image}/view?project=${config.appwriteProjectId}`}
+                          alt={blog.blog_heading}
                           fill
                           className="object-cover"
                         />
@@ -160,7 +124,7 @@ export default function BlogsPage() {
                     
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg line-clamp-1">{blog.title}</CardTitle>
+                        <CardTitle className="text-lg line-clamp-1">{blog.blog_heading}</CardTitle>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -225,7 +189,7 @@ export default function BlogsPage() {
                   ) : (
                     filteredBlogs.map((blog) => (
                       <TableRow key={blog.$id}>
-                        <TableCell className="font-medium">{blog.title}</TableCell>
+                        <TableCell className="font-medium">{blog.blog_heading}</TableCell>
                         <TableCell>{format(new Date(blog.$createdAt), 'MMM dd, yyyy')}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

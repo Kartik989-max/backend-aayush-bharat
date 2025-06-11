@@ -1,10 +1,19 @@
-import { Client, Databases, ID, Storage, Query } from "appwrite";
+import { ID, Query } from "appwrite";
 import { config } from "@/config/config";
-import { databases, storage } from "@/lib/appwrite";
+import { databases } from "@/lib/appwrite";
+
+export interface Blog {
+  $id: string;
+  blog_heading: string;
+  summary: string;
+  blog_data: string;
+  image?: string;
+  $createdAt: string;
+}
 
 // Blog collection ID from env with hardcoded fallbacks for safety
-const databaseId = config.appwriteDatabaseId || process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "68283bb0dfbb0bc2f45a";
-const blogCollectionId = config.appwriteBlogCollectionId || process.env.NEXT_PUBLIC_APPWRITE_BLOG_COLLECTION_ID || "6829ca28bb6f12e3b1a7";
+const databaseId = config.appwriteDatabaseId;
+const blogCollectionId = config.appwriteBlogCollectionId;
 
 // Blog service class
 export class BlogService {
@@ -17,7 +26,7 @@ export class BlogService {
   ) {
     try {
       console.log("Creating blog with:", { databaseId, blogCollectionId });
-        return await databases.createDocument(
+      return await databases.createDocument(
         databaseId,
         blogCollectionId,
         ID.unique(),
@@ -42,7 +51,8 @@ export class BlogService {
     blog_data: string,
     image?: string
   ) {
-    try {      return await databases.updateDocument(
+    try {
+      return await databases.updateDocument(
         databaseId,
         blogCollectionId,
         id,
@@ -60,13 +70,21 @@ export class BlogService {
   }
 
   // Get a blog post by ID
-  async getBlog(id: string) {
+  async getBlog(id: string): Promise<Blog> {
     try {
-      return await databases.getDocument(
+      const doc = await databases.getDocument(
         databaseId,
         blogCollectionId,
         id
       );
+      return {
+        $id: doc.$id,
+        blog_heading: doc.blog_heading,
+        summary: doc.summary,
+        blog_data: doc.blog_data,
+        image: doc.image,
+        $createdAt: doc.$createdAt
+      };
     } catch (error) {
       console.error("Appwrite service :: getBlog :: error", error);
       throw error;
@@ -74,16 +92,26 @@ export class BlogService {
   }
 
   // Get all blog posts
-  async getBlogs(limit: number = 10) {
+  async getBlogs(limit: number = 10): Promise<Blog[]> {
     try {
-      return await databases.listDocuments(
+      const response = await databases.listDocuments(
         databaseId,
         blogCollectionId,
         [
-          Query.orderDesc("created_at"),
+          Query.orderDesc("$createdAt"),
           Query.limit(limit),
         ]
       );
+
+      // Transform the response to match the Blog interface
+      return response.documents.map(doc => ({
+        $id: doc.$id,
+        blog_heading: doc.blog_heading,
+        summary: doc.summary,
+        blog_data: doc.blog_data,
+        image: doc.image,
+        $createdAt: doc.$createdAt
+      }));
     } catch (error) {
       console.error("Appwrite service :: getBlogs :: error", error);
       throw error;
@@ -107,5 +135,4 @@ export class BlogService {
 
 // Create a singleton instance
 const blogService = new BlogService();
-
 export default blogService;

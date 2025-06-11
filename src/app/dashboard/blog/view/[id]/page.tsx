@@ -8,6 +8,7 @@ import { ArrowLeft, Pencil } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { format } from 'date-fns';
+import { config } from '@/config/config';
 
 interface Blog {
   $id: string;
@@ -36,12 +37,11 @@ export default function ViewBlogPage({ params }: { params: { id: string } }) {
         const blog = await import('@/appwrite/blog').then(mod => mod.default.getBlog(id));
         if (blog) {
           setBlog({
-            $id: blog.$id,
-            title: blog.blog_heading,
+            $id: blog.$id,            title: blog.blog_heading,
             summary: blog.summary,
             content: blog.blog_data,
-            imageUrl: blog.image ? `/api/files/${blog.image}` : undefined,
-            $createdAt: blog.created_at || new Date().toISOString(),
+            imageUrl: blog.image ? `${config.appwriteEndpoint}/storage/buckets/${config.appwriteBlogBucketId}/files/${blog.image}/view?project=${config.appwriteProjectId}` : undefined,
+            $createdAt: blog.$createdAt
           });
         }
         setLoading(false);

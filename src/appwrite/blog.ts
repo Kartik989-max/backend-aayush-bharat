@@ -2,9 +2,9 @@ import { Client, Databases, ID, Storage, Query } from "appwrite";
 import { config } from "@/config/config";
 import { databases, storage } from "@/lib/appwrite";
 
-// Blog collection ID from env
-const databaseId = config.appwriteDatabaseId;
-const blogCollectionId = config.appwriteBlogCollectionId;
+// Blog collection ID from env with hardcoded fallbacks for safety
+const databaseId = config.appwriteDatabaseId || process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || "68283bb0dfbb0bc2f45a";
+const blogCollectionId = config.appwriteBlogCollectionId || process.env.NEXT_PUBLIC_APPWRITE_BLOG_COLLECTION_ID || "6829ca28bb6f12e3b1a7";
 
 // Blog service class
 export class BlogService {
@@ -16,6 +16,8 @@ export class BlogService {
     image?: string
   ) {
     try {
+      console.log("Creating blog with:", { databaseId, blogCollectionId });
+      
       return await databases.createDocument(
         databaseId,
         blogCollectionId,

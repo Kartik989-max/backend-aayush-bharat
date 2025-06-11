@@ -14,6 +14,7 @@ import { toast } from 'react-toastify';
 import { getFilePreview } from '@/lib/appwrite';
 import dynamic from 'next/dynamic';
 import blogService from '@/appwrite/blog';
+import { checkAppwriteConfig } from '@/utils/checkAppwrite';
 
 // Dynamically import the editor to prevent SSR issues
 const RichTextEditor = dynamic(() => import('@/components/blog/RichTextEditor'), {
@@ -40,6 +41,11 @@ export default function BlogForm({ id }: BlogFormProps) {
   const router = useRouter();
 
   useEffect(() => {
+    // Check Appwrite configuration in development mode
+    if (process.env.NODE_ENV === 'development') {
+      checkAppwriteConfig();
+    }
+    
     if (id) {
       setIsEditing(true);
       fetchBlog(id);
@@ -84,6 +90,15 @@ export default function BlogForm({ id }: BlogFormProps) {
       // Get the image ID from the selected media
       const imageId = selectedMedia.length > 0 ? selectedMedia[0].fileId : undefined;
       
+      console.log('Saving blog with data:', {
+        title: title.substring(0, 30) + '...',
+        summaryLength: summary.length,
+        contentLength: content.length,
+        hasImage: !!imageId,
+        isEditing,
+        id: id || 'new'
+      });
+      
       if (isEditing && id) {
         await blogService.updateBlog(id, title, summary, content, imageId);
         toast.success('Blog updated successfully');
@@ -91,11 +106,18 @@ export default function BlogForm({ id }: BlogFormProps) {
         await blogService.createBlog(title, summary, content, imageId);
         toast.success('Blog created successfully');
       }
-      
-      router.push('/dashboard/blog');
+        router.push('/dashboard/blog');
     } catch (error: any) {
       console.error('Error saving blog:', error);
-      toast.error(error?.message || 'Failed to save blog');
+      
+      // Provide more specific error messages
+      if (error?.message?.includes('route was not found')) {
+        toast.error('Blog collection not configured correctly. Please check Appwrite settings.');
+      } else if (error?.message?.includes('ID or Collection ID is missing')) {
+        toast.error('Appwrite configuration is incomplete. Please check environment variables.');
+      } else {
+        toast.error(error?.message || 'Failed to save blog');
+      }
     } finally {
       setLoading(false);
     }

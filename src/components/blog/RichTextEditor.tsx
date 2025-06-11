@@ -35,8 +35,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       console.error('Error parsing HTML content:', e);
       return EditorState.createEmpty();
     }
-  });
-  useEffect(() => {
+  });  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     if (!content) {
@@ -45,7 +44,12 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
     }
 
     try {
-      // Only update from props if the content is different and the component is mounted
+      // Skip update if editor has focus to prevent losing cursor position
+      if (document.activeElement?.className?.includes('DraftEditor-root')) {
+        return;
+      }
+      
+      // Only update from props if the content is different
       const currentContent = editorState.getCurrentContent();
       const currentHtml = stateToHTML(currentContent);
 
@@ -60,66 +64,52 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
     } catch (e) {
       console.error('Error updating editor state:', e);
     }
-  }, [content, editorState]);
-
+  }, [content]); // Remove editorState from dependencies
   const handleEditorChange = (state: EditorState) => {
     try {
       setEditorState(state);
-      const content = state.getCurrentContent();
-      const html = stateToHTML(content);
-      onChange(html);
+      
+      // Convert content to HTML and notify parent component
+      const contentState = state.getCurrentContent();
+      
+      // Check if content has text or is not empty
+      if (contentState.hasText() || contentState.getBlockMap().size > 1) {
+        const html = stateToHTML(contentState);
+        
+        // Only call onChange if the content has actually changed
+        if (html !== content) {
+          onChange(html);
+        }
+      }
     } catch (e) {
       console.error('Error in editor change handler:', e);
     }
-  };
-  const toolbarOptions = {
-    options: ['inline', 'blockType', 'fontSize', 'list', 'textAlign', 'colorPicker', 'link', 'embedded', 'emoji', 'image', 'history'],
+  };  const toolbarOptions = {
+    options: ['inline', 'blockType', 'list', 'textAlign', 'link', 'image', 'history'],
     inline: {
-      options: ['bold', 'italic', 'underline', 'strikethrough', 'monospace', 'superscript', 'subscript'],
+      options: ['bold', 'italic', 'underline', 'strikethrough'],
       bold: { className: 'toolbar-btn' },
       italic: { className: 'toolbar-btn' },
       underline: { className: 'toolbar-btn' },
       strikethrough: { className: 'toolbar-btn' },
-      monospace: { className: 'toolbar-btn' },
-      superscript: { className: 'toolbar-btn' },
-      subscript: { className: 'toolbar-btn' },
     },
     blockType: {
-      options: ['Normal', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'Blockquote', 'Code'],
-      className: 'toolbar-btn',
-    },
-    fontSize: {
-      options: [8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72, 96],
+      options: ['Normal', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'Blockquote'],
       className: 'toolbar-btn',
     },
     list: {
-      options: ['unordered', 'ordered', 'indent', 'outdent'],
+      options: ['unordered', 'ordered'],
       unordered: { className: 'toolbar-btn' },
       ordered: { className: 'toolbar-btn' },
-      indent: { className: 'toolbar-btn' },
-      outdent: { className: 'toolbar-btn' },
     },
     textAlign: {
-      options: ['left', 'center', 'right', 'justify'],
+      options: ['left', 'center', 'right'],
       left: { className: 'toolbar-btn' },
       center: { className: 'toolbar-btn' },
       right: { className: 'toolbar-btn' },
-      justify: { className: 'toolbar-btn' },
-    },
-    colorPicker: {
-      className: 'toolbar-btn',
-      popupClassName: 'toolbar-popup',
     },
     link: {
       options: ['link', 'unlink'],
-      className: 'toolbar-btn',
-      popupClassName: 'toolbar-popup',
-    },
-    emoji: {
-      className: 'toolbar-btn',
-      popupClassName: 'toolbar-popup',
-    },
-    embedded: {
       className: 'toolbar-btn',
       popupClassName: 'toolbar-popup',
     },
@@ -153,8 +143,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       undo: { className: 'toolbar-btn' },
       redo: { className: 'toolbar-btn' },
     },
-  };
-  return (
+  };  return (
     <div className="rich-text-editor-container">
       <Editor
         editorState={editorState}
@@ -163,10 +152,12 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         editorClassName="px-4 py-3 min-h-[300px] prose dark:prose-invert max-w-none"
         placeholder="Write your blog content here..."
         wrapperClassName="rounded-md border border-input"
-        toolbarClassName="sticky top-0 z-10 border-b border-input bg-background"
+        toolbarClassName="sticky top-0 z-10 border-b border-input bg-background flex flex-wrap"
         localization={{
           locale: 'en',
         }}
+        stripPastedStyles={false}
+        spellCheck={true}
       />
     </div>
   );

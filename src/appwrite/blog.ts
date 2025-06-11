@@ -17,8 +17,7 @@ export class BlogService {
   ) {
     try {
       console.log("Creating blog with:", { databaseId, blogCollectionId });
-      
-      return await databases.createDocument(
+        return await databases.createDocument(
         databaseId,
         blogCollectionId,
         ID.unique(),
@@ -26,8 +25,7 @@ export class BlogService {
           blog_heading: title,
           summary,
           blog_data,
-          image,
-          created_at: new Date().toISOString(),
+          image
         }
       );
     } catch (error) {
@@ -44,8 +42,7 @@ export class BlogService {
     blog_data: string,
     image?: string
   ) {
-    try {
-      return await databases.updateDocument(
+    try {      return await databases.updateDocument(
         databaseId,
         blogCollectionId,
         id,
@@ -53,8 +50,7 @@ export class BlogService {
           blog_heading: title,
           summary,
           blog_data,
-          image,
-          updated_at: new Date().toISOString(),
+          image
         }
       );
     } catch (error) {

@@ -420,28 +420,61 @@ export default function OrderDetailsPage() {
               <InfoRow label="Refund Due" value={order.refund_due || '-'} />
               <InfoRow label="Cancellation Fee" value={order.cancellation_fee ? `₹${order.cancellation_fee}` : '-'} />
             </CardContent>
-          </Card>            <Card className="md:col-span-2">
+          </Card>          <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle>Order Items</CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle>Order Items & Product Details</CardTitle>
+                {productData && (
+                  <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200">
+                    Product Loaded
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <InfoRow label="Total Items" value={order.order_items?.toString() || '0'} />
-              <InfoRow  label="Product ID" value={order.product_id} />              {productLoading ? (
+            <CardContent className="space-y-3"><InfoRow label="Total Items" value={order.order_items?.toString() || '0'} />
+              <InfoRow label="Product ID" value={order.product_id} />
+              
+              {productLoading ? (
                 <div className="flex flex-col sm:flex-row sm:justify-between">
                   <span className="text-muted-foreground">Product Name:</span>
                   <Shimmer type="text" className="w-32" />
                 </div>
               ) : productData ? (
-                <div className="flex flex-col sm:flex-row sm:justify-between">
-                  <span className="text-muted-foreground">Product Name:</span>
-                  <Badge variant="outline" className="bg-green-500/20 text-green-600  border-green-200">
-                    {productData.name}
-                  </Badge>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Product Name:</span>
+                    <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200 font-medium">
+                      {productData.name}
+                    </Badge>
+                  </div>
+                  {productData.description && (
+                    <div className="text-sm text-muted-foreground">
+                      <span className="font-medium line-clamp-1">Description:</span> {productData.description}
+                    </div>
+                  )}
                 </div>
-              ) : null}
-              {productData && (
+              ) : null}              {productData && (
                 <>
-                  <InfoRow label="Category" value={productData.category} />
+                  <InfoRow label="Category" value={productData.category} />                  {productData.tags && (
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-muted-foreground">Tags:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {productData.tags.split(',').map((tag: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="bg-blue-500/10 text-blue-600">
+                            {tag.trim()}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {productData.ingredients && (
+                    <div className="flex flex-col space-y-1">
+                      <span className="text-muted-foreground">Ingredients:</span>
+                      <div className="text-sm">
+                        {productData.ingredients}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>

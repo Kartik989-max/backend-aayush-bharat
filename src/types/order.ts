@@ -26,6 +26,7 @@ export interface OrderType extends Models.Document {
   first_name: string;
   last_name: string;
   order_items: number; // This is the only field we need for order items (total quantity)
+  order_variants?: string; // JSON string mapping product IDs to their selected variant IDs
   coupon_code?: string;
   razorpay_order_id?: string;
   razorpay_payment_id?: string;

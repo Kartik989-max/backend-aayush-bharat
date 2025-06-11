@@ -1,5 +1,6 @@
 import { databases } from '@/lib/appwrite';
 import { OrderType } from '@/types/order';
+import { VariantType } from '@/types/variant';
 
 export const orderService = {
   async getOrders(): Promise<OrderType[]> {
@@ -180,6 +181,56 @@ export const orderService = {
     } catch (error) {
       console.error('Error creating shipment:', error);
       throw error;
+    }
+  },
+
+  async getVariantsForOrder(orderVariantsJson: string): Promise<VariantType[]> {
+    try {
+      if (!orderVariantsJson || orderVariantsJson === '{}') {
+        console.log('No variants data in order or empty object');
+        return [];
+      }
+      
+      // Parse the order_variants JSON string
+      const orderVariants = JSON.parse(orderVariantsJson);
+      console.log('Parsed orderVariants:', orderVariants);
+      
+      // Extract variant IDs from the object
+      const variantIds = Object.values(orderVariants);
+      console.log('Extracted variant IDs:', variantIds);
+      
+      if (variantIds.length === 0) {
+        console.log('No variant IDs found in the order_variants object');
+        return [];
+      }
+      
+      // Make sure collection ID exists
+      if (!process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID) {
+        console.error('Missing NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID environment variable');
+        return [];
+      }
+        
+      // Fetch each variant individually and combine the results
+      const variantsPromises = variantIds.map(id => {
+        console.log(`Fetching variant with ID: ${id}`);
+        return databases.getDocument(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+          id as string
+        ).catch(error => {
+          console.error(`Failed to fetch variant with ID ${id}:`, error);
+          return null;
+        });
+      });
+      
+      const results = await Promise.all(variantsPromises);
+      // Filter out any null results from failed fetches
+      const validResults = results.filter(result => result !== null) as VariantType[];
+      console.log(`Successfully fetched ${validResults.length} variants out of ${variantIds.length} requested`);
+      return validResults;
+    } catch (error) {
+      console.error('Error fetching variants for order:', error);
+      return [];
     }
   }
 };

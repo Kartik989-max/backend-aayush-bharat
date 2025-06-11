@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { OrderType } from '@/types/order';
+import { VariantType } from '@/types/variant';
 import { orderService } from '@/services/orderService';
 import { ArrowLeft, Truck, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Shimmer } from "@/components/ui/shimmer";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { VariantCard } from '@/components/order/VariantCard';
 
 const statusOptions = [
   'pending',
@@ -27,7 +29,9 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [order, setOrder] = useState<OrderType | null>(null);
+  const [orderVariants, setOrderVariants] = useState<VariantType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [variantsLoading, setVariantsLoading] = useState(true);
   const [deliveryCharges, setDeliveryCharges] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [shippingCalculating, setShippingCalculating] = useState(false);
@@ -58,6 +62,13 @@ export default function OrderDetailsPage() {
     if (order?.delivery_charges) {
       setDeliveryCharges(order.delivery_charges.toString());
     }
+    
+    // Load variants when order is loaded
+    if (order?.order_variants) {
+      loadOrderVariants();
+    } else {
+      setVariantsLoading(false);
+    }
   }, [order]);
 
   const loadOrder = async () => {
@@ -69,6 +80,39 @@ export default function OrderDetailsPage() {
       console.error('Error loading order:', error);
     } finally {
       setLoading(false);
+    }  };
+  const loadOrderVariants = async () => {
+    if (!order?.order_variants) {
+      setVariantsLoading(false);
+      return;
+    }
+    
+    try {
+      setVariantsLoading(true);
+      
+      console.log('Loading variants for order:', {
+        orderId: order.$id,
+        orderVariants: order.order_variants
+      });
+      
+      const variantsData = await orderService.getVariantsForOrder(order.order_variants);
+      
+      console.log('Loaded variants:', variantsData);
+      
+      if (variantsData.length === 0) {
+        console.warn('No variants found for order', order.$id);
+      }
+      
+      setOrderVariants(variantsData);
+    } catch (error) {
+      console.error('Error loading order variants:', error);
+      toast({
+        title: 'Error loading variants',
+        description: 'Failed to load variant information for this order',
+        variant: 'destructive',
+      });
+    } finally {
+      setVariantsLoading(false);
     }
   };
 
@@ -349,8 +393,7 @@ export default function OrderDetailsPage() {
               <InfoRow label="Cancellation Fee" value={order.cancellation_fee ? `₹${order.cancellation_fee}` : '-'} />
             </CardContent>
           </Card>
-          
-          <Card className="md:col-span-2">
+            <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Order Items</CardTitle>
             </CardHeader>
@@ -358,6 +401,74 @@ export default function OrderDetailsPage() {
               <InfoRow label="Total Items" value={order.order_items?.toString() || '0'} />
               <InfoRow label="Product ID" value={order.product_id} />
               <InfoRow label="Weights" value={order.weights ? JSON.stringify(order.weights) : 'None'} />
+            </CardContent>
+          </Card>
+          
+          <Card className="md:col-span-2">
+            <CardHeader>              <div className="flex justify-between items-center">
+                <CardTitle>Order Variants</CardTitle>
+                {order.order_variants && (
+                  <Badge variant="outline" className="bg-blue-500/20 text-blue-600 border-blue-200">
+                    {orderVariants.length} Variant{orderVariants.length !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {variantsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((_, i) => (
+                    <Shimmer key={i} type="card" />
+                  ))}
+                </div>
+              ) : orderVariants.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {orderVariants.map((variant) => (
+                    <VariantCard key={variant.$id} variant={variant} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 space-y-4">
+                  <p className="text-muted-foreground">
+                    {order.order_variants ? 
+                      "Failed to load variant information for this order" : 
+                      "No variant information available for this order"}
+                  </p>
+                  {order.order_variants && !variantsLoading && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => loadOrderVariants()}
+                      size="sm"
+                    >
+                      Try Again
+                    </Button>
+                  )}
+                </div>
+              )}
+              {order.order_variants && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">Raw Variant Data:</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs h-6 px-2"
+                      onClick={() => {
+                        if (order.order_variants) {
+                          const variantIds = Object.values(JSON.parse(order.order_variants));
+                          console.log('Variant IDs in order:', variantIds);
+                          console.log('Environment variable:', process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID);
+                        }
+                      }}
+                    >
+                      Debug
+                    </Button>
+                  </div>
+                  <pre className="bg-muted p-2 rounded-md text-xs overflow-auto max-h-32">
+                    {order.order_variants}
+                  </pre>
+                </div>
+              )}
             </CardContent>
           </Card>
 

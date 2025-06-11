@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { OrderType } from '@/types/order';
 import { VariantType } from '@/types/variant';
 import { orderService } from '@/services/orderService';
+import { productService } from '@/services/productService';
 import { ArrowLeft, Truck, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,8 +31,10 @@ export default function OrderDetailsPage() {
   const { toast } = useToast();
   const [order, setOrder] = useState<OrderType | null>(null);
   const [orderVariants, setOrderVariants] = useState<VariantType[]>([]);
+  const [productData, setProductData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [variantsLoading, setVariantsLoading] = useState(true);
+  const [productLoading, setProductLoading] = useState(false);
   const [deliveryCharges, setDeliveryCharges] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [shippingCalculating, setShippingCalculating] = useState(false);
@@ -45,8 +48,7 @@ export default function OrderDetailsPage() {
     delivery_postcode: '',
     cod: false
   });
-  
-  useEffect(() => {
+    useEffect(() => {
     loadOrder();
   }, [orderId]);
   
@@ -69,8 +71,12 @@ export default function OrderDetailsPage() {
     } else {
       setVariantsLoading(false);
     }
+    
+    // Load product details when order is loaded
+    if (order?.product_id) {
+      loadProductDetails();
+    }
   }, [order]);
-
   const loadOrder = async () => {
     try {
       setLoading(true);
@@ -80,7 +86,29 @@ export default function OrderDetailsPage() {
       console.error('Error loading order:', error);
     } finally {
       setLoading(false);
-    }  };
+    }  
+  };
+
+  const loadProductDetails = async () => {
+    if (!order?.product_id) return;
+    
+    try {
+      setProductLoading(true);
+      const data = await productService.getProductWithVariants(order.product_id);
+      setProductData(data);
+      console.log('Product data loaded:', data);
+    } catch (error) {
+      console.error('Error loading product details:', error);
+      toast({
+        title: 'Error loading product',
+        description: 'Failed to load product information for this order',
+        variant: 'destructive',
+      });
+    } finally {
+      setProductLoading(false);
+    }
+  };
+  
   const loadOrderVariants = async () => {
     if (!order?.order_variants) {
       setVariantsLoading(false);
@@ -392,15 +420,30 @@ export default function OrderDetailsPage() {
               <InfoRow label="Refund Due" value={order.refund_due || '-'} />
               <InfoRow label="Cancellation Fee" value={order.cancellation_fee ? `₹${order.cancellation_fee}` : '-'} />
             </CardContent>
-          </Card>
-            <Card className="md:col-span-2">
+          </Card>            <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Order Items</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="Total Items" value={order.order_items?.toString() || '0'} />
-              <InfoRow label="Product ID" value={order.product_id} />
-              <InfoRow label="Weights" value={order.weights ? JSON.stringify(order.weights) : 'None'} />
+              <InfoRow  label="Product ID" value={order.product_id} />              {productLoading ? (
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                  <span className="text-muted-foreground">Product Name:</span>
+                  <Shimmer type="text" className="w-32" />
+                </div>
+              ) : productData ? (
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                  <span className="text-muted-foreground">Product Name:</span>
+                  <Badge variant="outline" className="bg-green-500/20 text-green-600  border-green-200">
+                    {productData.name}
+                  </Badge>
+                </div>
+              ) : null}
+              {productData && (
+                <>
+                  <InfoRow label="Category" value={productData.category} />
+                </>
+              )}
             </CardContent>
           </Card>
           

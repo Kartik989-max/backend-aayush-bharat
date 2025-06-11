@@ -12,19 +12,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowLeft, Save, ImageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { getFilePreview } from '@/lib/appwrite';
+import dynamic from 'next/dynamic';
+import blogService from '@/appwrite/blog';
 
-// This is a placeholder for the rich text editor component
-// We'll use a simple textarea for now until you provide the actual editor
-const BlogEditor = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
-  return (
-    <Textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Write your blog content here..."
-      className="min-h-[300px]"
-    />
-  );
-};
+// Dynamically import the editor to prevent SSR issues
+const RichTextEditor = dynamic(() => import('@/components/blog/RichTextEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="border rounded p-4 min-h-[300px] bg-muted flex items-center justify-center">
+      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+    </div>
+  ),
+});
 
 interface BlogFormProps {
   id?: string;
@@ -46,24 +45,32 @@ export default function BlogForm({ id }: BlogFormProps) {
       fetchBlog(id);
     }
   }, [id]);
+
   const fetchBlog = async (blogId: string) => {
     try {
       setLoading(true);
-      // This is a placeholder - in a real app you would fetch from your API
-      // For now we'll just simulate loading
-      setTimeout(() => {
-        setTitle('Sample Blog Title');
-        setSummary('This is a sample blog summary.');
-        setContent('This is the content of the sample blog post.');
-        setLoading(false);
-      }, 1000);
+      const blog = await blogService.getBlog(blogId);
+      
+      if (blog) {
+        setTitle(blog.blog_heading || '');
+        setSummary(blog.summary || '');
+        setContent(blog.blog_data || '');
+        
+        if (blog.image) {
+          setSelectedMedia([{ 
+            fileId: blog.image, 
+            url: getFilePreview(blog.image)
+          }]);
+        }
+      }
+      
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching blog:', error);
       toast.error('Failed to load blog');
       setLoading(false);
     }
-  };
-  const handleSubmit = async (e: React.FormEvent) => {
+  };  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!title || !summary || !content) {
@@ -74,14 +81,21 @@ export default function BlogForm({ id }: BlogFormProps) {
     try {
       setLoading(true);
       
-      // This is a placeholder - in a real app you would save to your API
-      setTimeout(() => {
-        toast.success(isEditing ? 'Blog updated successfully' : 'Blog created successfully');
-        router.push('/dashboard/blog');
-      }, 1000);
-    } catch (error) {
+      // Get the image ID from the selected media
+      const imageId = selectedMedia.length > 0 ? selectedMedia[0].fileId : undefined;
+      
+      if (isEditing && id) {
+        await blogService.updateBlog(id, title, summary, content, imageId);
+        toast.success('Blog updated successfully');
+      } else {
+        await blogService.createBlog(title, summary, content, imageId);
+        toast.success('Blog created successfully');
+      }
+      
+      router.push('/dashboard/blog');
+    } catch (error: any) {
       console.error('Error saving blog:', error);
-      toast.error('Failed to save blog');
+      toast.error(error?.message || 'Failed to save blog');
     } finally {
       setLoading(false);
     }
@@ -142,15 +156,16 @@ export default function BlogForm({ id }: BlogFormProps) {
                   </p>
                 </div>
               </CardContent>
-            </Card>
-
-            <Card>
+            </Card>            <Card>
               <CardHeader>
                 <CardTitle>Blog Content</CardTitle>
                 <CardDescription>Write your blog content here</CardDescription>
               </CardHeader>
               <CardContent>
-                <BlogEditor value={content} onChange={setContent} />
+                <RichTextEditor content={content} onChange={setContent} />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Use the toolbar above to format your content. Your changes will be saved as HTML.
+                </p>
               </CardContent>
             </Card>
           </div>

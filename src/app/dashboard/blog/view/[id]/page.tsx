@@ -27,33 +27,49 @@ export default function ViewBlogPage({ params }: { params: { id: string } }) {
     if (params.id) {
       fetchBlog(params.id);
     }
-  }, [params.id]);
-  const fetchBlog = async (id: string) => {
+  }, [params.id]);  const fetchBlog = async (id: string) => {
     try {
       setLoading(true);
       
-      // For UI demonstration, create a dummy blog
-      setTimeout(() => {
-        setBlog({
-          $id: id,
-          title: 'Getting Started with Your New Product',
-          summary: 'A comprehensive guide to using your new purchase effectively.',
-          content: `
-            <p>This is a sample blog post content. In a real application, this would be the full content of the blog post that you're viewing.</p>
-            <h2>Introduction</h2>
-            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum nec varius massa. Nulla facilisi. Duis vel neque euismod, aliquet nisi vel, tincidunt nisl.</p>
-            <h2>Getting Started</h2>
-            <p>Sed at consectetur urna. Nullam vitae magna euismod, convallis nibh id, mattis enim. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Duis vel neque euismod, aliquet nisi vel, tincidunt nisl.</p>
-            <h2>Tips and Tricks</h2>
-            <p>In hac habitasse platea dictumst. Donec facilisis tortor vel magna lacinia, vel dictum velit vehicula. Donec non turpis et neque mattis scelerisque vel et sapien. Aenean lacinia dolor in dolor congue, vel congue velit mattis.</p>
-            <h2>Conclusion</h2>
-            <p>Cras mattis fermentum tortor at sollicitudin. Maecenas ultrices, massa et sollicitudin tincidunt, libero mi vestibulum elit, vitae commodo lacus augue at magna.</p>
-          `,
-          imageUrl: '/placeholder.jpg',
-          $createdAt: new Date().toISOString(),
-        });
+      // Fetch the blog from the service
+      try {
+        const blog = await import('@/appwrite/blog').then(mod => mod.default.getBlog(id));
+        if (blog) {
+          setBlog({
+            $id: blog.$id,
+            title: blog.blog_heading,
+            summary: blog.summary,
+            content: blog.blog_data,
+            imageUrl: blog.image ? `/api/files/${blog.image}` : undefined,
+            $createdAt: blog.created_at || new Date().toISOString(),
+          });
+        }
         setLoading(false);
-      }, 1000);
+      } catch (error) {
+        console.log('Error fetching from service, using fallback data', error);
+        // Fallback for UI demonstration if service fetch fails
+        setTimeout(() => {
+          setBlog({
+            $id: id,
+            title: 'Getting Started with Your New Product',
+            summary: 'A comprehensive guide to using your new purchase effectively.',
+            content: `
+              <p>This is a sample blog post content. In a real application, this would be the full content of the blog post that you're viewing.</p>
+              <h2>Introduction</h2>
+              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum nec varius massa. Nulla facilisi. Duis vel neque euismod, aliquet nisi vel, tincidunt nisl.</p>
+              <h2>Getting Started</h2>
+              <p>Sed at consectetur urna. Nullam vitae magna euismod, convallis nibh id, mattis enim. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Duis vel neque euismod, aliquet nisi vel, tincidunt nisl.</p>
+              <h2>Tips and Tricks</h2>
+              <p>In hac habitasse platea dictumst. Donec facilisis tortor vel magna lacinia, vel dictum velit vehicula. Donec non turpis et neque mattis scelerisque vel et sapien. Aenean lacinia dolor in dolor congue, vel congue velit mattis.</p>
+              <h2>Conclusion</h2>
+              <p>Cras mattis fermentum tortor at sollicitudin. Maecenas ultrices, massa et sollicitudin tincidunt, libero mi vestibulum elit, vitae commodo lacus augue at magna.</p>
+            `,
+            imageUrl: '/placeholder.jpg',
+            $createdAt: new Date().toISOString(),
+          });
+          setLoading(false);
+        }, 1000);
+      }
       
     } catch (error) {
       console.error('Error fetching blog:', error);

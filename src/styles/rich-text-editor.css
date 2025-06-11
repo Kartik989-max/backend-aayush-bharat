@@ -1,0 +1,121 @@
+/* Custom styles for the rich text editor */
+
+/* General styles */
+.rdw-editor-wrapper {
+  background-color: var(--background);
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+/* Toolbar styles */
+.rdw-editor-toolbar {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--muted);
+  border-radius: 0.375rem 0.375rem 0 0;
+  padding: 0.5rem;
+  margin-bottom: 0;
+}
+
+.rdw-option-wrapper {
+  border: 1px solid var(--border);
+  background-color: var(--background);
+}
+
+.rdw-option-wrapper:hover {
+  background-color: var(--primary-light);
+}
+
+.rdw-option-active {
+  background-color: var(--primary-light);
+  border-color: var(--primary);
+}
+
+/* Editor area styles */
+.rdw-editor-main {
+  padding: 1rem;
+  min-height: 300px;
+  font-family: var(--font-sans);
+  color: var(--foreground);
+}
+
+.rdw-editor-main:focus {
+  outline: none;
+}
+
+/* Dark mode adjustments */
+:root[class~="dark"] .rdw-editor-toolbar {
+  background-color: hsl(var(--muted) / 0.3);
+}
+
+:root[class~="dark"] .rdw-option-wrapper {
+  background-color: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--border) / 0.3);
+}
+
+:root[class~="dark"] .rdw-option-wrapper:hover {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+:root[class~="dark"] .rdw-option-active {
+  background-color: hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary) / 0.8);
+}
+
+/* Placeholder styles */
+.public-DraftEditorPlaceholder-root {
+  color: var(--muted-foreground);
+}
+
+/* Link styles */
+.rdw-link-decorator a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+/* Block quote styles */
+blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: var(--muted-foreground);
+}
+
+/* Headings in editor */
+.rdw-editor-main h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.rdw-editor-main h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.rdw-editor-main h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.rdw-editor-main h4, .rdw-editor-main h5, .rdw-editor-main h6 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Lists in editor */
+.rdw-editor-main ul, .rdw-editor-main ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.rdw-editor-main li {
+  margin-bottom: 0.25rem;
+}

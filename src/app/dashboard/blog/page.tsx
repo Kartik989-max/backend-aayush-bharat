@@ -33,6 +33,7 @@ import { format } from 'date-fns';
 import Image from 'next/image';
 import { BlogService, Blog } from '@/appwrite/blog';
 import { config } from '@/config/config';
+import getFilePreview from '@/lib/getFilePreview';
 
 export default function BlogsPage() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -108,9 +109,8 @@ export default function BlogsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 {filteredBlogs.slice(0, 3).map((blog) => (
                   <Card key={blog.$id} className="overflow-hidden h-full flex flex-col">
-                    <div className="relative h-48 w-full">                      {blog.image ? (
-                        <Image 
-                          src={`${config.appwriteEndpoint}/storage/buckets/${config.appwriteBlogBucketId}/files/${blog.image}/view?project=${config.appwriteProjectId}`}
+                    <div className="relative h-48 w-full">                      {blog.image ? (                        <Image 
+                          src={getFilePreview(blog.image)}
                           alt={blog.blog_heading}
                           fill
                           className="object-cover"

@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { config } from '@/config/config';
+import getFilePreview from '@/lib/getFilePreview';
 
 interface Blog {
   $id: string;
@@ -40,7 +41,7 @@ export default function ViewBlogPage({ params }: { params: { id: string } }) {
             $id: blog.$id,            title: blog.blog_heading,
             summary: blog.summary,
             content: blog.blog_data,
-            imageUrl: blog.image ? `${config.appwriteEndpoint}/storage/buckets/${config.appwriteBlogBucketId}/files/${blog.image}/view?project=${config.appwriteProjectId}` : undefined,
+            imageUrl: blog.image ? getFilePreview(blog.image) : undefined,
             $createdAt: blog.$createdAt
           });
         }

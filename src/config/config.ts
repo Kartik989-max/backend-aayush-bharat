@@ -15,12 +15,12 @@ export const config = {
   appwriteCollectionCollectionId: process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_COLLECTION_ID || '',
   appwriteCouponsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_COUPONS_COLLECTION_ID || '',
   appwriteBlogCollectionId: process.env.NEXT_PUBLIC_APPWRITE_BLOG_COLLECTION_ID || '',
-    // Storage buckets
+  // Storage buckets
   appwriteProductBucketId: process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_BUCKET_ID || '',
   appwriteHeroBucketId: process.env.NEXT_PUBLIC_APPWRITE_HERO_BUCKET_ID || '',
   appwriteCollectionBucketId: process.env.NEXT_PUBLIC_APPWRITE_COLLECTION_BUCKET_ID || '',
   appwriteReelsBucketId: process.env.NEXT_PUBLIC_APPWRITE_REELS_BUCKET_ID || '',
-  appwriteBlogBucketId: process.env.NEXT_PUBLIC_APPWRITE_BLOG_BUCKET_ID || '',
+  appwriteBlogBucketId: process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || '682762c0001ebf72e7f5',
   
   // URL
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',

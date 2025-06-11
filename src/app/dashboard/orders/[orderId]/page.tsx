@@ -445,7 +445,7 @@ export default function OrderDetailsPage() {
                   )}
                 </div>
               )}
-              {order.order_variants && (
+              {/* {order.order_variants && (
                 <div className="mt-4 pt-4 border-t">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-sm font-medium text-muted-foreground">Raw Variant Data:</h3>
@@ -468,7 +468,7 @@ export default function OrderDetailsPage() {
                     {order.order_variants}
                   </pre>
                 </div>
-              )}
+              )} */}
             </CardContent>
           </Card>
 

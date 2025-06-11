@@ -81,12 +81,12 @@ export function VariantCard({ variant }: VariantCardProps) {
           </div>
         )}
         
-        <div className="flex items-center justify-between">
+        {/* <div className="flex items-center justify-between">
           <div className="font-medium text-sm text-muted-foreground">Stock:</div>
           <div className={`font-semibold ${variant.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
             {variant.stock > 0 ? `In Stock (${variant.stock})` : 'Out of Stock'}
           </div>
-        </div>
+        </div> */}
         
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm text-muted-foreground">Product ID:</div>

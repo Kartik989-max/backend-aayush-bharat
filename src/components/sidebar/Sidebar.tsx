@@ -14,7 +14,8 @@ import {
   PenSquare,
   Ticket,
   ScrollText,
-  Film
+  Film,
+  FileText
 } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -36,7 +37,6 @@ const Sidebar = () => {
       toast.error('Failed to logout');
     }
   };
-
   const navigation = [
     {
       name: 'Dashboard',
@@ -72,6 +72,11 @@ const Sidebar = () => {
       name: 'Reel Manager',
       href: '/dashboard/reels',
       icon: Film,
+    },
+    {
+      name: 'Blog',
+      href: '/dashboard/blog',
+      icon: FileText,
     },
     {
       name: 'Orders',

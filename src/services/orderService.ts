@@ -120,7 +120,6 @@ export const orderService = {
       data
     );
   },
-
   async calculateShiprocketShipping(data: {
     pickup_postcode: string;
     delivery_postcode: string;
@@ -133,9 +132,7 @@ export const orderService = {
     try {
       console.log('Sending shipping calculation request:', data);
       
-      // Use mock API temporarily for testing
-      const useMockAPI = true;
-      const apiUrl = useMockAPI ? '/api/shipping/mock' : '/api/shipping/calculate';
+      const apiUrl = '/api/shipping/calculate';
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -165,9 +162,7 @@ export const orderService = {
         ...shipmentData
       });
       
-      // Use mock API temporarily for testing
-      const useMockAPI = true;
-      const apiUrl = useMockAPI ? '/api/shipping/mock-create-order' : '/api/shipping/create-order';
+      const apiUrl = '/api/shipping/create-order';
       
       const response = await fetch(apiUrl, {
         method: 'POST',

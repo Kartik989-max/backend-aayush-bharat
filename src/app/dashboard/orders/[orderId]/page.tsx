@@ -267,12 +267,23 @@ export default function OrderDetailsPage() {
       setShippingCalculating(false);
     }
   };
-
   const createShipment = async (courierId: number, companyName: string) => {
     if (!order) return;
     
     try {
       setSaving(true);
+      
+      // Map order variants to order items for Shiprocket
+      const orderItems = orderVariants.map(variant => ({
+        name: variant.name || 'Product',
+        sku: variant.$id || '',
+        units: 1, // Assuming quantity is always 1, adjust as needed
+        selling_price: variant.price || 0,
+        discount: 0,
+        tax: 0,
+        hsn: variant.hsn_code || ''
+      }));
+      
       // Construct shipment data for Shiprocket
       const shipmentRequestData = {
         order_id: order.$id,
@@ -298,7 +309,7 @@ export default function OrderDetailsPage() {
         shipping_country: order.country,
         shipping_email: order.email,
         shipping_phone: order.phone_number,
-        order_items: [], // You'd need to populate this with actual order items
+        order_items: orderItems,
         payment_method: order.payment_type === "COD" ? "COD" : "Prepaid",
         sub_total: order.total_price,
         length: shipmentData.length,

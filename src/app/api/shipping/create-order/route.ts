@@ -43,14 +43,13 @@ export async function POST(request: Request) {
       const authData = await authResponse.json();
     const token = authData.token;
     console.log('Shiprocket authentication successful, received token');
-    
-    // Create order in Shiprocket
+      // Create order in Shiprocket
     console.log('Creating order in Shiprocket with data:', {
       ...shipmentData,
-      apiUrl: `${process.env.SHIPROCKET_API_URL}/orders/create/adhoc`
+      apiUrl: `${process.env.SHIPROCKET_API_URL}/shipments/create/forward-shipment`
     });
     
-    const orderResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/orders/create/adhoc`, {
+    const orderResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/shipments/create/forward-shipment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,16 +72,15 @@ export async function POST(request: Request) {
     }
     
     const orderData = await orderResponse.json();
-    
-    // Update the order in our database with Shiprocket info
+      // Update the order in our database with Shiprocket info
     await databases.updateDocument(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
       orderId,
       {
-        shiprocket_order_id: orderData.order_id?.toString(),
+        shiprocket_order_id: orderData.shipment_id?.toString() || orderData.order_id?.toString(),
         shiprocket_shipment_id: orderData.shipment_id?.toString(),
-        tracking_id: orderData.tracking_number || null,
+        tracking_id: orderData.tracking_number || orderData.awb_code || null,
         shipping_status: 'processing',
         label_url: orderData.label_url || null,
         manifest_url: orderData.manifest_url || null,

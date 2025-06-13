@@ -38,16 +38,18 @@ export default function OrderDetailsPage() {
   const [deliveryCharges, setDeliveryCharges] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [shippingCalculating, setShippingCalculating] = useState(false);
-  const [shippingRates, setShippingRates] = useState<any[]>([]);
-  const [shipmentData, setShipmentData] = useState({
+  const [shippingRates, setShippingRates] = useState<any[]>([]);  const [shipmentData, setShipmentData] = useState({
     weight: 0.5,
     length: 10,
     breadth: 10,
     height: 10,
     pickup_postcode: '400001', // Default Mumbai postcode
     delivery_postcode: '',
-    cod: false
-  });    useEffect(() => {
+    cod: false,
+    calculatedWeightGrams: 0,
+    calculatedWeightKg: 0,
+    hasMinimumWeightApplied: false
+  });useEffect(() => {
     loadOrder();
   }, [orderId]);
   
@@ -76,8 +78,7 @@ export default function OrderDetailsPage() {
       loadProductDetails();
     }
   }, [order]);
-  
-  // New useEffect to calculate total weight from variants and update shipment data
+    // New useEffect to calculate total weight from variants and update shipment data
   useEffect(() => {
     if (orderVariants.length > 0) {
       // Calculate total weight in grams from all variants
@@ -88,14 +89,21 @@ export default function OrderDetailsPage() {
       }, 0);
       
       // Convert from grams to kilograms for Shiprocket (divide by 1000)
-      const totalWeightInKg = Math.max(totalWeightInGrams / 1000, 0.5); // Minimum 0.5kg
+      const calculatedWeightInKg = totalWeightInGrams / 1000;
       
-      console.log(`Calculated total weight from ${orderVariants.length} variants: ${totalWeightInGrams}g (${totalWeightInKg}kg)`);
+      // Apply minimum weight requirement (0.5kg) if needed
+      const finalWeightInKg = calculatedWeightInKg < 0.5 ? 0.5 : calculatedWeightInKg;
+      
+      console.log(`Calculated total weight from ${orderVariants.length} variants: ${totalWeightInGrams}g (${calculatedWeightInKg}kg, final: ${finalWeightInKg}kg)`);
       
       // Update shipment data with the calculated weight
       setShipmentData(prev => ({
         ...prev,
-        weight: totalWeightInKg
+        weight: finalWeightInKg,
+        // Store original calculated values for display purposes
+        calculatedWeightGrams: totalWeightInGrams,
+        calculatedWeightKg: calculatedWeightInKg,
+        hasMinimumWeightApplied: calculatedWeightInKg < 0.5
       }));
     }
   }, [orderVariants]);
@@ -206,12 +214,24 @@ export default function OrderDetailsPage() {
       setSaving(false);
     }
   };
-
   const handleShipmentDataChange = (field: string, value: any) => {
-    setShipmentData(prev => ({
-      ...prev,
-      [field]: field === 'cod' ? value === 'true' : value
-    }));
+    setShipmentData(prev => {
+      const newState = { ...prev, [field]: field === 'cod' ? value === 'true' : value };
+      
+      // If manually changing weight, update calculation flags
+      if (field === 'weight' && orderVariants.length > 0) {
+        // Only mark as manually changed if it's different from both calculated weights
+        const isManualChange = value !== prev.calculatedWeightKg && value !== prev.weight;
+        if (isManualChange) {
+          return {
+            ...newState,
+            hasMinimumWeightApplied: false,  // No longer using minimum weight logic
+          };
+        }
+      }
+      
+      return newState;
+    });
   };
 
   const calculateShipping = async () => {
@@ -630,25 +650,33 @@ export default function OrderDetailsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Shiprocket Shipping Calculation</CardTitle>
               <Truck className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
+            </CardHeader>            <CardContent>
               {orderVariants.length > 0 && (
                 <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-100">
-                  <div className="flex items-center gap-2 text-green-700 text-sm">
-                    <Truck className="h-4 w-4" />
-                    <span className="font-medium">Weight automatically calculated: </span> 
-                    <span>{(orderVariants.reduce((total, v) => total + (v.weight || 0), 0))}g = {shipmentData.weight}kg</span>
+                  <div className="flex flex-col gap-1 text-green-700 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4" />
+                      <span className="font-medium">Weight calculation: </span> 
+                    </div>
+                    <div className="pl-6 flex flex-col gap-1">
+                      <div>Total variants weight: {shipmentData.calculatedWeightGrams}g = {shipmentData.calculatedWeightKg.toFixed(3)}kg</div>
+                      {shipmentData.hasMinimumWeightApplied && (
+                        <div className="flex items-center gap-1 text-amber-600">
+                          <span>⚠️ Applied minimum weight of 0.5kg for shipping</span>
+                        </div>
+                      )}
+                      <div className="font-medium">Final shipping weight: {shipmentData.weight}kg</div>
+                    </div>
                   </div>
                 </div>
               )}
               <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div className="space-y-4">                  <div className="grid grid-cols-2 gap-4">
-                    <div>
+                <div className="space-y-4">                  <div className="grid grid-cols-2 gap-4">                    <div>
                       <Label htmlFor="weight" className="mb-1 flex items-center gap-1">
                         Weight (kg)
                         {orderVariants.length > 0 && (
-                          <Badge variant="outline" className="bg-green-500/10 text-green-600 text-xs">
-                            Auto from variants
+                          <Badge variant="outline" className={`text-xs ${shipmentData.hasMinimumWeightApplied ? 'bg-amber-500/10 text-amber-600' : 'bg-green-500/10 text-green-600'}`}>
+                            {shipmentData.hasMinimumWeightApplied ? 'Min 0.5kg applied' : 'Auto from variants'}
                           </Badge>
                         )}
                       </Label>

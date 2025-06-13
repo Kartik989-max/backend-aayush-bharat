@@ -158,11 +158,18 @@ export const orderService = {
       console.error('Error calculating shipping:', error);
       throw error;
     }
-  },
-
-  async createShiprocketOrder(orderId: string, shipmentData: any) {
+  },  async createShiprocketOrder(orderId: string, shipmentData: any) {
     try {
-      const response = await fetch('/api/shipping/create-order', {
+      console.log('Sending create order request to Shiprocket API:', {
+        orderId,
+        ...shipmentData
+      });
+      
+      // Use mock API temporarily for testing
+      const useMockAPI = true;
+      const apiUrl = useMockAPI ? '/api/shipping/mock-create-order' : '/api/shipping/create-order';
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +181,10 @@ export const orderService = {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to create shipment');
+        const errorData = await response.json();
+        const errorMessage = errorData.details || errorData.error || 'Failed to create shipment';
+        console.error('Shiprocket API error:', errorData);
+        throw new Error(errorMessage);
       }
       
       return await response.json();

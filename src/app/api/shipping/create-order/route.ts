@@ -11,9 +11,12 @@ export async function POST(request: Request) {
         { error: "Order ID is required" }, 
         { status: 400 }
       );
-    }
-
-    // Shiprocket API authentication
+    }    // Shiprocket API authentication
+    console.log('Attempting Shiprocket authentication with:', {
+      email: process.env.SHIPROCKET_EMAIL,
+      apiUrl: process.env.SHIPROCKET_API_URL
+    });
+    
     const authResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/auth/login`, {
       method: 'POST',
       headers: {
@@ -26,17 +29,27 @@ export async function POST(request: Request) {
     });
     
     if (!authResponse.ok) {
-      console.error('Shiprocket authentication failed');
+      const errorText = await authResponse.text();
+      console.error('Shiprocket authentication failed:', {
+        status: authResponse.status,
+        statusText: authResponse.statusText,
+        response: errorText
+      });
       return NextResponse.json(
-        { error: "Failed to authenticate with shipping provider" }, 
+        { error: "Failed to authenticate with shipping provider", details: errorText }, 
         { status: 500 }
       );
     }
-    
-    const authData = await authResponse.json();
+      const authData = await authResponse.json();
     const token = authData.token;
+    console.log('Shiprocket authentication successful, received token');
     
     // Create order in Shiprocket
+    console.log('Creating order in Shiprocket with data:', {
+      ...shipmentData,
+      apiUrl: `${process.env.SHIPROCKET_API_URL}/orders/create/adhoc`
+    });
+    
     const orderResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/orders/create/adhoc`, {
       method: 'POST',
       headers: {
@@ -47,9 +60,14 @@ export async function POST(request: Request) {
     });
     
     if (!orderResponse.ok) {
-      console.error('Shiprocket order creation failed');
+      const errorText = await orderResponse.text();
+      console.error('Shiprocket order creation failed:', {
+        status: orderResponse.status,
+        statusText: orderResponse.statusText,
+        response: errorText
+      });
       return NextResponse.json(
-        { error: "Failed to create shipment" }, 
+        { error: "Failed to create shipment", details: errorText }, 
         { status: 500 }
       );
     }
@@ -72,11 +90,10 @@ export async function POST(request: Request) {
     );
     
     return NextResponse.json(orderData);
-    
-  } catch (error) {
+      } catch (error) {
     console.error('Error creating shipment:', error);
     return NextResponse.json(
-      { error: "An unexpected error occurred" }, 
+      { error: "An unexpected error occurred", details: error instanceof Error ? error.message : String(error) }, 
       { status: 500 }
     );
   }

@@ -28,8 +28,7 @@ const statusOptions = [
 export default function OrderDetailsPage() {
   const { orderId } = useParams();
   const router = useRouter();
-  const { toast } = useToast();
-  const [order, setOrder] = useState<OrderType | null>(null);
+  const { toast } = useToast();  const [order, setOrder] = useState<OrderType | null>(null);
   const [orderVariants, setOrderVariants] = useState<VariantType[]>([]);
   const [productData, setProductData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +37,9 @@ export default function OrderDetailsPage() {
   const [deliveryCharges, setDeliveryCharges] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [shippingCalculating, setShippingCalculating] = useState(false);
-  const [shippingRates, setShippingRates] = useState<any[]>([]);  const [shipmentData, setShipmentData] = useState({
+  const [shippingRates, setShippingRates] = useState<any[]>([]);  
+  const [selectedCourierId, setSelectedCourierId] = useState<number | null>(null);
+  const [shipmentData, setShipmentData] = useState({
     weight: 0.5,
     length: 10,
     breadth: 10,
@@ -314,11 +315,16 @@ export default function OrderDetailsPage() {
         title: 'Shipment created',
         description: `Shipment created with ${companyName}`,
       });
+      
+      // Reset the selected courier ID
+      setSelectedCourierId(null);
+      // Reset shipping rates to clear the selection UI
+      setShippingRates([]);
     } catch (error) {
       console.error('Error creating shipment:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create shipment',
+        description: error instanceof Error ? error.message : 'Failed to create shipment',
         variant: 'destructive',
       });
     } finally {
@@ -779,13 +785,15 @@ export default function OrderDetailsPage() {
                   <>Calculate Shipping Rates</>
                 )}
               </Button>
-              
-              {shippingRates.length > 0 && (
+                {shippingRates.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Available Shipping Options</h3>
                   <div className="grid gap-4">
                     {shippingRates.map((rate, index) => (
-                      <Card key={index} className="overflow-hidden">
+                      <Card 
+                        key={index} 
+                        className={`overflow-hidden ${selectedCourierId === rate.courier_company_id ? 'border-primary border-2' : ''}`}
+                      >
                         <CardContent className="p-4">
                           <div className="flex justify-between items-center">
                             <div className="space-y-1">
@@ -793,14 +801,32 @@ export default function OrderDetailsPage() {
                               <p className="text-muted-foreground text-sm">Delivery: {rate.estimated_delivery_days} days</p>
                               <Badge className="mt-1" variant="secondary">₹{rate.rate}</Badge>
                             </div>
-                            <Button 
-                              onClick={() => createShipment(rate.courier_company_id, rate.courier_name)}
-                              disabled={saving}
-                              variant="outline"
-                              size="sm"
-                            >
-                              {saving ? 'Creating...' : 'Ship with this courier'}
-                            </Button>
+                            {selectedCourierId === rate.courier_company_id ? (
+                              <Button 
+                                onClick={() => createShipment(rate.courier_company_id, rate.courier_name)}
+                                disabled={saving}
+                                variant="default"
+                                size="sm"
+                              >
+                                {saving ? (
+                                  <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Creating...
+                                  </>
+                                ) : 'Create Shipment'}
+                              </Button>
+                            ) : (
+                              <Button 
+                                onClick={() => setSelectedCourierId(rate.courier_company_id)}
+                                variant="outline"
+                                size="sm"
+                              >
+                                Select
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

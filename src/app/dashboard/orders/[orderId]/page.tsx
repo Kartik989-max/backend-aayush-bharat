@@ -47,8 +47,7 @@ export default function OrderDetailsPage() {
     pickup_postcode: '400001', // Default Mumbai postcode
     delivery_postcode: '',
     cod: false
-  });
-    useEffect(() => {
+  });    useEffect(() => {
     loadOrder();
   }, [orderId]);
   
@@ -77,6 +76,30 @@ export default function OrderDetailsPage() {
       loadProductDetails();
     }
   }, [order]);
+  
+  // New useEffect to calculate total weight from variants and update shipment data
+  useEffect(() => {
+    if (orderVariants.length > 0) {
+      // Calculate total weight in grams from all variants
+      const totalWeightInGrams = orderVariants.reduce((total, variant) => {
+        // Handle missing or invalid weight values
+        const variantWeight = variant.weight || 0;
+        return total + variantWeight;
+      }, 0);
+      
+      // Convert from grams to kilograms for Shiprocket (divide by 1000)
+      const totalWeightInKg = Math.max(totalWeightInGrams / 1000, 0.5); // Minimum 0.5kg
+      
+      console.log(`Calculated total weight from ${orderVariants.length} variants: ${totalWeightInGrams}g (${totalWeightInKg}kg)`);
+      
+      // Update shipment data with the calculated weight
+      setShipmentData(prev => ({
+        ...prev,
+        weight: totalWeightInKg
+      }));
+    }
+  }, [orderVariants]);
+  
   const loadOrder = async () => {
     try {
       setLoading(true);
@@ -603,18 +626,32 @@ export default function OrderDetailsPage() {
               </div>
             </CardContent>
           </Card>
-          
-          <Card className="md:col-span-2">
+            <Card className="md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Shiprocket Shipping Calculation</CardTitle>
               <Truck className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
+              {orderVariants.length > 0 && (
+                <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-100">
+                  <div className="flex items-center gap-2 text-green-700 text-sm">
+                    <Truck className="h-4 w-4" />
+                    <span className="font-medium">Weight automatically calculated: </span> 
+                    <span>{(orderVariants.reduce((total, v) => total + (v.weight || 0), 0))}g = {shipmentData.weight}kg</span>
+                  </div>
+                </div>
+              )}
               <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="weight" className="mb-1">Weight (kg)</Label>
+                      <Label htmlFor="weight" className="mb-1 flex items-center gap-1">
+                        Weight (kg)
+                        {orderVariants.length > 0 && (
+                          <Badge variant="outline" className="bg-green-500/10 text-green-600 text-xs">
+                            Auto from variants
+                          </Badge>
+                        )}
+                      </Label>
                       <Input 
                         id="weight"
                         type="number" 

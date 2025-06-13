@@ -51,11 +51,12 @@ export function VariantCard({ variant }: VariantCardProps) {
             <ImageOff className="h-12 w-12 text-muted-foreground opacity-50" />
           </div>
         )}
-      </div>
-      <CardContent className="p-4 space-y-2">
+      </div>      <CardContent className="p-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="font-medium text-sm text-muted-foreground">Weight:</div>
-          <div className="font-semibold">{variant.weight || 'N/A'} {variant.weight ? 'g' : ''}</div>
+          <div className={`font-semibold ${variant.weight ? 'text-green-600' : 'text-amber-500'}`}>
+            {variant.weight || 'N/A'} {variant.weight ? 'g' : ''}
+          </div>
         </div>
         
         <div className="flex items-center justify-between">

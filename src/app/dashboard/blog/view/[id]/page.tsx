@@ -20,16 +20,24 @@ interface Blog {
   $createdAt: string;
 }
 
-export default function ViewBlogPage({ params }: { params: { id: string } }) {
+// Separate client component to handle React hooks
+function ViewBlogClient({ id }: { id: string }) {
   const [blog, setBlog] = useState<Blog | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (params.id) {
-      fetchBlog(params.id);
+    if (id) {
+      fetchBlog(id);
     }
-  }, [params.id]);  const fetchBlog = async (id: string) => {
+  }, [id]);
+  useEffect(() => {
+    if (id) {
+      fetchBlog(id);
+    }
+  }, [id]);
+  
+  const fetchBlog = async (id: string) => {
     try {
       setLoading(true);
       
@@ -166,7 +174,13 @@ export default function ViewBlogPage({ params }: { params: { id: string } }) {
             <Pencil size={18} /> Edit Blog
           </Button>
         </CardFooter>
-      </Card>
-    </div>
+      </Card>    </div>
   );
+}
+
+// Main page component that handles the Promise params
+export default async function ViewBlogPage(props: { params: Promise<{ id: string }> }) {
+  // Await the params Promise
+  const params = await props.params;
+  return <ViewBlogClient id={params.id} />;
 }

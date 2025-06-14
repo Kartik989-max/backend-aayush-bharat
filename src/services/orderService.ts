@@ -119,8 +119,7 @@ export const orderService = {
       'unique()',
       data
     );
-  },
-  async calculateShiprocketShipping(data: {
+  },  async calculateShiprocketShipping(data: {
     pickup_postcode: string;
     delivery_postcode: string;
     weight: number;
@@ -140,12 +139,22 @@ export const orderService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
+        cache: 'no-store',
+        next: { revalidate: 0 },
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Failed to calculate shipping: ${response.status} ${errorText}`);
-        throw new Error(`Failed to calculate shipping: ${response.status} ${errorText}`);
+        let errorDetail = '';
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.details || errorData.error || '';
+        } catch (e) {
+          const errorText = await response.text();
+          errorDetail = errorText;
+        }
+        
+        console.error(`Failed to calculate shipping: ${response.status}`, errorDetail);
+        throw new Error(`Failed to calculate shipping: ${response.status} ${errorDetail}`);
       }
       
       const responseData = await response.json();
@@ -173,12 +182,21 @@ export const orderService = {
           orderId,
           ...shipmentData
         }),
+        cache: 'no-store',
+        next: { revalidate: 0 },
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.details || errorData.error || 'Failed to create shipment';
-        console.error('Shiprocket API error:', errorData);
+        let errorMessage = '';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.details || errorData.error || 'Failed to create shipment';
+          console.error('Shiprocket API error:', errorData);
+        } catch (e) {
+          const errorText = await response.text();
+          errorMessage = errorText || 'Failed to create shipment';
+          console.error('Shiprocket API error text:', errorText);
+        }
         throw new Error(errorMessage);
       }
       

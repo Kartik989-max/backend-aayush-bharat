@@ -21,10 +21,13 @@ export async function POST(request: Request) {
         { error: "Missing required parameters" }, 
         { status: 400 }
       );
-    }
-
-    // Shiprocket API authentication
-    const authResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/auth/login`, {
+    }    // Shiprocket API authentication
+    console.log('Attempting Shiprocket authentication with:', {
+      email: process.env.SHIPROCKET_EMAIL,
+      apiUrl: process.env.SHIPROCKET_API_URL
+    });
+    
+    const authResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/v1/external/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,9 +39,15 @@ export async function POST(request: Request) {
     });
     
     if (!authResponse.ok) {
-      console.error('Shiprocket authentication failed', await authResponse.text());
+      const errorText = await authResponse.text();
+      console.error('Shiprocket authentication failed:', {
+        status: authResponse.status,
+        statusText: authResponse.statusText,
+        url: `${process.env.SHIPROCKET_API_URL}/v1/external/auth/login`,
+        response: errorText
+      });
       return NextResponse.json(
-        { error: "Failed to authenticate with shipping provider" }, 
+        { error: "Failed to authenticate with shipping provider", details: errorText }, 
         { status: 500 }
       );
     }
@@ -54,12 +63,9 @@ export async function POST(request: Request) {
       cod: cod ? '1' : '0',
       length: length.toString(),
       breadth: breadth.toString(),
-      height: height.toString()
-    });
-
-    console.log(`Calling Shiprocket API: ${process.env.SHIPROCKET_API_URL}/courier/serviceability?${queryParams}`);
+      height: height.toString()    });    console.log(`Calling Shiprocket API: ${process.env.SHIPROCKET_API_URL}/v1/external/courier/serviceability?${queryParams}`);
     
-    const shippingResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/courier/serviceability?${queryParams}`, {
+    const shippingResponse = await fetch(`${process.env.SHIPROCKET_API_URL}/v1/external/courier/serviceability?${queryParams}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -68,9 +74,15 @@ export async function POST(request: Request) {
     });
     
     if (!shippingResponse.ok) {
-      console.error('Shiprocket serviceability check failed', await shippingResponse.text());
+      const errorText = await shippingResponse.text();
+      console.error('Shiprocket serviceability check failed:', {
+        status: shippingResponse.status,
+        statusText: shippingResponse.statusText,
+        url: `${process.env.SHIPROCKET_API_URL}/v1/external/courier/serviceability?${queryParams}`,
+        response: errorText
+      });
       return NextResponse.json(
-        { error: "Failed to calculate shipping rates" }, 
+        { error: "Failed to calculate shipping rates", details: errorText }, 
         { status: 500 }
       );
     }

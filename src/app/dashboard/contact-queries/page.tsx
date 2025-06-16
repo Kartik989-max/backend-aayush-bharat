@@ -2,24 +2,38 @@
 
 import React, { useState, useEffect } from 'react';
 import { databases } from '@/lib/appwrite';
-import { Table, TableHead, TableRow, TableCell, TableBody } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shimmer } from '@/components/ui/shimmer';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, Search, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ContactQuery {
   $id: string;
   email: string;
   fullname: string;
   message: string;
+  createdAt: string;
 }
+
+const ITEMS_PER_PAGE = 30;
 
 const ContactQueriesPage = () => {
   const [queries, setQueries] = useState<ContactQuery[]>([]);
   const [filteredQueries, setFilteredQueries] = useState<ContactQuery[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchQueries();
@@ -27,11 +41,13 @@ const ContactQueriesPage = () => {
 
   useEffect(() => {
     const filtered = queries.filter(query =>
-      query.email.includes(search) ||
-      query.fullname.includes(search) ||
-      query.message.includes(search)
+      query.email.toLowerCase().includes(search.toLowerCase()) ||
+      query.fullname.toLowerCase().includes(search.toLowerCase()) ||
+      query.message.toLowerCase().includes(search.toLowerCase())
     );
     setFilteredQueries(filtered);
+    setTotalPages(Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    setCurrentPage(1);
   }, [search, queries]);
 
   const fetchQueries = async () => {
@@ -47,10 +63,12 @@ const ContactQueriesPage = () => {
         email: doc.email || '',
         fullname: doc.fullname || '',
         message: doc.message || '',
+        createdAt: doc.$createdAt || '',
       }));
 
       setQueries(mappedQueries);
       setFilteredQueries(mappedQueries);
+      setTotalPages(Math.ceil(mappedQueries.length / ITEMS_PER_PAGE));
     } catch (error) {
       console.error('Error fetching contact queries:', error);
     } finally {
@@ -58,47 +76,161 @@ const ContactQueriesPage = () => {
     }
   };
 
-  return (
-    <div className="p-4">
-      <h1 className="text-3xl font-bold mb-4">Contact Queries</h1>
+  const getCurrentPageData = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredQueries.slice(startIndex, endIndex);
+  };
 
-      <div className="mb-4">
-        <Input
-          placeholder="Search by email, fullname, or message"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const toggleMessage = (id: string) => {
+    setExpandedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const MessageCell = ({ message, id }: { message: string; id: string }) => {
+    const isExpanded = expandedMessages.has(id);
+    const messageLines = message.split('\n');
+    const hasMoreThanTwoLines = messageLines.length > 2;
+
+    return (
+      <div className="space-y-2">
+        <div className={`${!isExpanded ? 'line-clamp-2' : ''} whitespace-pre-wrap`}>
+          {message}
+        </div>
+        {hasMoreThanTwoLines && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => toggleMessage(id)}
+          >
+            {isExpanded ? (
+              <>
+                Show less <ChevronUp className="ml-1 h-3 w-3" />
+              </>
+            ) : (
+              <>
+                Show more <ChevronDown className="ml-1 h-3 w-3" />
+              </>
+            )}
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Contact Queries</h1>
+        <Button onClick={fetchQueries} variant="outline">
+          Refresh
+        </Button>
       </div>
 
-      {loading ? (
-        <div className="space-y-6">
-          <Shimmer type="text" className="w-48" />
-          <Shimmer type="table" count={5} />
-        </div>
-      ) : filteredQueries.length === 0 ? (
-        <div className="text-center text-muted-foreground">No contact queries found.</div>
-      ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Email</TableCell>
-              <TableCell>Fullname</TableCell>
-              <TableCell>Message</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredQueries.map((query) => (
-              <TableRow key={query.$id}>
-                <TableCell>{query.email}</TableCell>
-                <TableCell>{query.fullname}</TableCell>
-                <TableCell>{query.message}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by email, name, or message"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
 
-      <Button onClick={fetchQueries} className="mt-4">Refresh</Button>
+          {loading ? (
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-48" />
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </div>
+          ) : filteredQueries.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              No contact queries found.
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[250px]">Email</TableHead>
+                      <TableHead className="w-[200px]">Full Name</TableHead>
+                      <TableHead>Message</TableHead>
+                      <TableHead className="w-[180px] text-right">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getCurrentPageData().map((query) => (
+                      <TableRow key={query.$id}>
+                        <TableCell className="font-medium">{query.email}</TableCell>
+                        <TableCell>{query.fullname}</TableCell>
+                        <TableCell className="max-w-[400px]">
+                          <MessageCell message={query.message} id={query.$id} />
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">{formatDate(query.createdAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredQueries.length)} of {filteredQueries.length} entries
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

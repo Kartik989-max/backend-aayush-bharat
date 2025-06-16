@@ -101,11 +101,13 @@ const Sidebar = () => {
   ];
 
   return (
-    <Card className="h-screen border-r-2 w-64 bg-card fixed left-0 top-0 rounded-none">
-      <div className="p-6">
-        <h1 className="text-2xl border-b-2 font-bold text-primary mb-8">Admin</h1>
-        
-        <nav className="space-y-2">
+    <Card className="h-screen border-r-2 w-64 bg-card fixed left-0 top-0 rounded-none flex flex-col">
+      <div className="p-6 border-b">
+        <h1 className="text-2xl font-bold text-primary">Admin</h1>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto">
+        <nav className="space-y-2 p-6">
           {navigation.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -128,7 +130,7 @@ const Sidebar = () => {
         </nav>
       </div>
 
-      <div className="absolute bottom-0 w-full p-6">
+      <div className="p-6 border-t">
         <Button 
           variant="ghost"
           className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"

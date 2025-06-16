@@ -33,9 +33,10 @@ export interface ProductDocument extends Models.Document {
   collections: string[]; // Array of collection IDs
 }
 
-// ProductFormData is just like Product but with optional $id
-export type ProductFormData = Omit<Product, '$id'> & {
+// ProductFormData is just like Product but with optional $id and optional variants
+export type ProductFormData = Omit<Product, '$id' | 'variants'> & {
   $id?: string;
+  variants?: Variants[];
 };
 
 export interface Collection {

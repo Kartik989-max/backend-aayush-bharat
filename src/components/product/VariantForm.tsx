@@ -151,10 +151,18 @@ const VariantForm: React.FC<VariantFormProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Add a new variant
+  };  // Add a new variant
   const addVariant = async () => {
+    // Don't create more than one empty variant
+    const hasEmptyVariant = variants.some(v => 
+      v.price === 0 && v.weight === 0 && v.stock === 0
+    );
+    
+    if (hasEmptyVariant) {
+      toast.warning("Please fill in the empty variant before adding another one");
+      return;
+    }
+    
     const newVariant: Variants = {
       productId: productId || "",
       price: 0,
@@ -166,11 +174,13 @@ const VariantForm: React.FC<VariantFormProps> = ({
       additionalImages: [],
     };
 
-    if (!productId) {
+    // If this is a new product (no productId yet), just add to state
+    if (!productId || productId.startsWith('temp_')) {
       updateVariantState([...variants, newVariant]);
       return;
     }
 
+    // For existing products, create variant in database
     try {
       setLoading(true);
       const result = await databases.createDocument(
@@ -406,12 +416,19 @@ const VariantForm: React.FC<VariantFormProps> = ({
       console.error("Error creating variants:", error);
       toast.error("Failed to create variants");
     }
-  };
-
-  const handleAddVariant = () => {
-    if (!productId) return;
+  };  const handleAddVariant = () => {
+    // Don't create more than one empty variant
+    const hasEmptyVariant = variants.some(v => 
+      v.price === 0 && v.weight === 0 && v.stock === 0
+    );
+    
+    if (hasEmptyVariant) {
+      toast.warning("Please fill in the empty variant before adding another one");
+      return;
+    }
+    
     const newVariant: Variants = {
-      productId,
+      productId: productId || "",
       price: 0,
       weight: 0,
       sale_price: 0,
@@ -420,6 +437,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
       image: "",
       additionalImages: [],
     };
+    
     if (onChange) onChange([...variants, newVariant]);
   };
 

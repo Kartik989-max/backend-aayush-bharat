@@ -14,7 +14,7 @@ import { AlertCircle, Plus, X } from 'lucide-react';
 import VariantForm from './VariantForm';
 import { MediaManager } from '../media/MediaManager';
 import { Dialog } from '../ui/dialog';
-import { createDocument, getFilePreview, databases } from '@/lib/appwrite';
+import { createDocument, getFilePreview, databases, ID } from '@/lib/appwrite';
 import { Query } from 'appwrite';
 import {
   Select,
@@ -258,7 +258,6 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
       collections: [value] // Store only the selected collection ID
     }));
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -268,6 +267,13 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
       const invalidVariant = formData.variants.find(v => v.months > 12);
       if (invalidVariant) {
         toast.error('Months cannot be more than 12');
+        return;
+      }
+
+      // Check if there are valid variants with prices > 0
+      const validVariants = formData.variants.filter(v => v.price > 0 && v.weight > 0 && v.stock > 0);
+      if (validVariants.length === 0) {
+        toast.error('You must add at least one variant with a price, weight, and stock greater than 0');
         return;
       }
 
@@ -285,32 +291,15 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         slug: formData.slug,
         ingredients: formData.ingredients,
         collections: collections,
-        productVideo: formData.productVideo.map(v => v.fileId), // Store the relationship document IDs
-        variants: formData.variants.map(variant => {
-          // Remove $id for new variants to avoid Appwrite error
-          const { $id, ...variantWithoutId } = variant;
-          return {
-            ...variantWithoutId,
-            months: Math.min(Number(variant.months), 12)
-          };
-        })
+        productVideo: formData.productVideo.map(v => v.fileId) // Store the relationship document IDs
       };
 
-      let productId: string;
-      
-      if (initialData?.$id) {
+      let productId: string;      if (initialData?.$id) {
         // Update existing product
         await productService.updateProduct(initialData.$id, productData);
         productId = initialData.$id;
-      } else {
-        // Create new product
-        const result = await createDocument(
-          process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
-          productData
-        );
-        productId = result.$id;
-
-        // Update product_video relationships with the new productId
+        
+        // Update product_video relationships with the productId
         if (formData.productVideo.length > 0) {
           const updatePromises = formData.productVideo.map(video => 
             databases.updateDocument(
@@ -322,11 +311,15 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           );
           await Promise.all(updatePromises);
         }
-      }
-
-      // Handle variants
-      if (formData.variants.length > 0) {
-        const variantPromises = formData.variants.map((variant) => {
+      } else {
+        // For new products, we don't create the product here
+        // It will be created by the parent component's handleSubmit method
+        productId = "temp_" + ID.unique(); // Temporary ID for client-side use only
+      }// Handle variants only for existing products
+      // For new products, we'll include variants in the product data 
+      // so the parent component can handle creation
+      if (initialData?.$id && validVariants.length > 0) {
+        const variantPromises = validVariants.map((variant) => {
           const variantData = {
             productId: productId,
             price: Number(variant.price),
@@ -335,7 +328,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             sale_price: Number(variant.sale_price),
             stock: Number(variant.stock),
             image: variant.image || "",
-            additionalImages: variant.additionalImages
+            additionalImages: variant.additionalImages || []
           };
 
           if (variant.$id) {
@@ -349,19 +342,20 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             );
           }
         });
+        
         await Promise.all(variantPromises);
       }
 
       // Convert to Product type for the callback
       const product: Product = {
         $id: productId,
-        name: productData.name,
-        description: productData.description,
-        category: productData.category,
-        tags: productData.tags,
-        slug: productData.slug,
-        ingredients: productData.ingredients,
-        variants: formData.variants,
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        tags: formData.tags,
+        slug: formData.slug,
+        ingredients: formData.ingredients,
+        variants: validVariants,
         collections: collections,
         productVideo: formData.productVideo.map(v => v.fileId) // Use the relationship document IDs
       };

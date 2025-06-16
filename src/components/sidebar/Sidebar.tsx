@@ -59,6 +59,11 @@ const Sidebar = () => {
       icon: FolderOpen,
     },
     {
+      name: 'Media',
+      href: '/dashboard/media',
+      icon: Image,
+    },
+    {
       name: 'Hero Section',
       href: '/dashboard/hero',
       icon: Image,

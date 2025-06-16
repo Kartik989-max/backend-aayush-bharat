@@ -167,14 +167,14 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
   return (
     <Dialog open={open} onClose={onClose} title="Media Library">
       <div className="flex flex-col h-[80vh]">
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b text-white border-gray-200">
           <Button
             variant={tab === "browse" ? "default" : "ghost"}
             onClick={() => setTab("browse")}
             className={cn(
               "rounded-none border-b-2 border-transparent",
               tab === "browse" 
-                ? "border-primary text-primary font-medium" 
+                ? "border-primary text-white font-medium" 
                 : "text-muted-foreground hover:text-foreground"
             )}
             data-state={tab === "browse" ? "active" : "inactive"}
@@ -187,7 +187,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
             className={cn(
               "rounded-none border-b-2 border-transparent",
               tab === "upload" 
-                ? "border-primary text-primary font-medium" 
+                ? "border-primary text-white font-medium" 
                 : "text-muted-foreground hover:text-foreground"
             )}
             data-state={tab === "upload" ? "active" : "inactive"}
@@ -388,7 +388,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
               onClose();
             }}
             disabled={selected.length === 0}
-            className="text-white disabled:text-gray-400"
+            className="text-white"
           >
             Select ({selected.length})
           </Button>

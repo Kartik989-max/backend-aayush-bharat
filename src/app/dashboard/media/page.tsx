@@ -17,6 +17,7 @@ export default function MediaPage() {
         open={true}
         onSelect={handleMediaSelect}
         allowMultiple={true}
+        isForm={false}
       />
     </div>
   );

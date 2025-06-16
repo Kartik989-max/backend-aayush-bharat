@@ -495,6 +495,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             onClose={() => setShowMediaManager(false)}
             allowMultiple={true}
             open={showMediaManager}
+            isForm={true}
           />
         </form>
       </Dialog>

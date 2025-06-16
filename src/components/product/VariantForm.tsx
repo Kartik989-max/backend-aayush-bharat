@@ -724,6 +724,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
               onClose={() => setShowMediaManager(false)}
               allowMultiple={isAdditionalImages}
               open={showMediaManager}
+              isForm={true}
             />
           </form>
         </Dialog>

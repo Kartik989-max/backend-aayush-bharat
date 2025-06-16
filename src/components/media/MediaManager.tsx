@@ -11,12 +11,14 @@ import { Dialog } from "../ui/dialog";
 import { Card, CardContent } from "../ui/card";
 import { cn } from "@/lib/utils";
 import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface MediaManagerProps {
   onSelect: (files: { fileId: string; url: string; mimeType?: string }[]) => void;
   onClose?: () => void;
   allowMultiple?: boolean;
   open: boolean;
+  isForm?: boolean;
 }
 
 interface UploadProgressProps {
@@ -39,7 +41,7 @@ const UploadProgress = ({ fileName, progress }: UploadProgressProps) => (
   </div>
 );
 
-export function MediaManager({ onSelect, onClose, allowMultiple = false, open }: MediaManagerProps) {
+export function MediaManager({ onSelect, onClose, allowMultiple = false, open, isForm = false }: MediaManagerProps) {
   const [mediaType, setMediaType] = useState<"image" | "video">("image");
   const [files, setFiles] = useState<Models.File[]>([]);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -49,6 +51,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [uploading, setUploading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter();
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil(totalFiles / itemsPerPage);
@@ -166,34 +169,43 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
 
   const content = (
     <div className="flex flex-col h-[80vh]">
-      <div className="flex border-b text-white border-gray-200">
-        <Button
-          variant={tab === "browse" ? "default" : "ghost"}
-          onClick={() => setTab("browse")}
-          className={cn(
-            "rounded-none border-b-2 border-transparent",
-            tab === "browse" 
-              ? "border-primary text-white font-medium" 
-              : "text-muted-foreground hover:text-foreground"
-          )}
-          data-state={tab === "browse" ? "active" : "inactive"}
-        >
-          Browse
-        </Button>
-        <Button
-          variant={tab === "upload" ? "default" : "ghost"}
-          onClick={() => setTab("upload")}
-          className={cn(
-            "rounded-none border-b-2 border-transparent",
-            tab === "upload" 
-              ? "border-primary text-white font-medium" 
-              : "text-muted-foreground hover:text-foreground"
-          )}
-          data-state={tab === "upload" ? "active" : "inactive"}
-        >
-          Upload
-        </Button>
-      </div>
+      {!isForm && (
+        <div className="flex border-b text-white border-gray-200">
+          <Button
+            variant={tab === "browse" ? "default" : "ghost"}
+            onClick={() => setTab("browse")}
+            className={cn(
+              "rounded-none border-b-2 border-transparent",
+              tab === "browse" 
+                ? "border-primary text-white font-medium" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            data-state={tab === "browse" ? "active" : "inactive"}
+          >
+            Browse
+          </Button>
+          <Button
+            variant={tab === "upload" ? "default" : "ghost"}
+            onClick={() => {
+              if (isForm) {
+                router.push('/dashboard/media');
+                if (onClose) onClose();
+              } else {
+                setTab("upload");
+              }
+            }}
+            className={cn(
+              "rounded-none border-b-2 border-transparent",
+              tab === "upload" 
+                ? "border-primary text-white font-medium" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            data-state={tab === "upload" ? "active" : "inactive"}
+          >
+            Upload
+          </Button>
+        </div>
+      )}
 
       <div className="flex gap-2 p-4 border-b">
         <Button

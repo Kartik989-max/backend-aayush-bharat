@@ -42,8 +42,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
   onChange, 
   onVariantCreate,
   disabled = false
-}) => {
-  const [variants, setVariants] = useState<Variants[]>(() => {
+}) => {  const [variants, setVariants] = useState<Variants[]>(() => {
     if (initialVariants.length > 0) {
       return initialVariants.map(variant => ({
         ...variant,
@@ -55,7 +54,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
       price: 0,
       weight: 0,
       months: 1,
-      sale_price: 0,
+      sale_price: 0, // Include sale_price with default value of 0
       stock: 0,
       image: "",
       additionalImages: []
@@ -162,8 +161,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
       toast.warning("Please fill in the empty variant before adding another one");
       return;
     }
-    
-    const newVariant: Variants = {
+      const newVariant: Variants = {
       productId: productId || "",
       price: 0,
       weight: 0,
@@ -183,20 +181,21 @@ const VariantForm: React.FC<VariantFormProps> = ({
     // For existing products, create variant in database
     try {
       setLoading(true);
+      const variantData: any = {
+        ...newVariant,
+        productId: productId,
+        price: parseInt(String(newVariant.price)),
+        weight: parseInt(String(newVariant.weight)),
+        months: parseInt(String(newVariant.months)),
+        stock: parseInt(String(newVariant.stock)),
+        additionalImages: [],
+      };
+
       const result = await databases.createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
         ID.unique(),
-        {
-          ...newVariant,
-          productId: productId,
-          price: Number(newVariant.price),
-          weight: Number(newVariant.weight),
-          months: Number(newVariant.months),
-          sale_price: Number(newVariant.sale_price),
-          stock: Number(newVariant.stock),
-          additionalImages: [],
-        }
+        variantData
       );
 
       const newVariantWithId = {
@@ -213,28 +212,33 @@ const VariantForm: React.FC<VariantFormProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Update a variant
+  };  // Update a variant
   const updateVariant = async (index: number, field: keyof VariantUpdateData, value: any) => {
     const variant = variants[index];
     if (!productId || !variant.$id) return;
 
     try {
-      const updateData: VariantUpdateData = {
+      const updateData: any = {
         productId: variant.productId || productId || '',
-        price: Number(variant.price) || 0,
-        weight: Number(variant.weight) || 0,
-        months: Number(variant.months) || 1,
-        sale_price: Number(variant.sale_price) || 0,
-        stock: Number(variant.stock) || 0,
+        price: parseInt(String(variant.price)) || 0,
+        weight: parseInt(String(variant.weight)) || 0,
+        months: parseInt(String(variant.months)) || 1,
+        stock: parseInt(String(variant.stock)) || 0,
+        sale_price: parseInt(String(variant.sale_price)) || 0,
         image: variant.image || "",
         additionalImages: Array.isArray(variant.additionalImages) ? variant.additionalImages : []
       };
 
       // Update the changed field
-      if (field === 'price' || field === 'weight' || field === 'months' || field === 'sale_price' || field === 'stock') {
-        (updateData[field] as number) = Number(value);
+      if (field === 'price' || field === 'weight' || field === 'months' || field === 'stock') {
+        (updateData[field] as number) = parseInt(String(value)) || 0;
+      } else if (field === 'sale_price') {
+        // For sale_price, handle empty values but still save as 0 to satisfy type constraints
+        if (value === undefined || value === null || String(value).trim() === '') {
+          updateData.sale_price = 0;
+        } else {
+          updateData.sale_price = parseInt(String(value)) || 0;
+        }
       } else if (field === 'additionalImages' && Array.isArray(value)) {
         updateData.additionalImages = value;
       } else if (field === 'image') {
@@ -369,9 +373,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
     setVariants(prev => prev.map(variant =>
       variant.productId === productId ? { ...variant, [name]: value } : variant
     ));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  };  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Submitting variant with data:", variants);
     
@@ -379,14 +381,15 @@ const VariantForm: React.FC<VariantFormProps> = ({
       // Create each variant individually
       const results = await Promise.all(
         variants.map(async (variant) => {
-          const submissionData = {
+          const submissionData: any = {
             ...variant,
-            price: Number(variant.price),
-            weight: Number(variant.weight),
-            months: Number(variant.months),
-            sale_price: Number(variant.sale_price),
-            stock: Number(variant.stock),
+            price: parseInt(String(variant.price)) || 0,
+            weight: parseInt(String(variant.weight)) || 0,
+            months: parseInt(String(variant.months)) || 1,
+            stock: parseInt(String(variant.stock)) || 0,
+            sale_price: variant.sale_price === 0 ? 0 : (parseInt(String(variant.sale_price)) || 0)
           };
+          
           return await productService.createVariant(submissionData);
         })
       );
@@ -416,7 +419,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
       console.error("Error creating variants:", error);
       toast.error("Failed to create variants");
     }
-  };  const handleAddVariant = () => {
+  };const handleAddVariant = () => {
     // Don't create more than one empty variant
     const hasEmptyVariant = variants.some(v => 
       v.price === 0 && v.weight === 0 && v.stock === 0
@@ -444,9 +447,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
   const handleRemoveVariant = (index: number) => {
     const newVariants = variants.filter((_, i) => i !== index);
     if (onChange) onChange(newVariants);
-  };
-
-  const handleVariantChange = (
+  };  const handleVariantChange = (
     index: number,
     field: VariantField,
     value: string | number
@@ -454,22 +455,33 @@ const VariantForm: React.FC<VariantFormProps> = ({
     const newVariants = [...variants];
     const variant = newVariants[index];
     
-    // Convert numeric fields
-    if (typeof value === 'string' && ['price', 'weight', 'sale_price', 'stock', 'months'].includes(field)) {
-      const numValue = Number(value) || 0;
-      if (field === 'months') {
-        // Ensure months is between 1 and 12
-        value = Math.min(Math.max(numValue, 1), 12);
-      } else {
-        value = numValue;
+    // Handle sale_price specifically - allow it to be empty
+    if (field === 'sale_price' && (value === '' || value === null)) {
+      // If empty, set as 0 to satisfy type constraint but display as empty in UI
+      newVariants[index] = {
+        ...variant,
+        [field]: 0
+      };
+    } else {
+      // Convert numeric fields
+      if (typeof value === 'string' && ['price', 'weight', 'sale_price', 'stock', 'months'].includes(field)) {
+        // For integers, parse as integer
+        if (['price', 'weight', 'sale_price', 'stock'].includes(field)) {
+          const numValue = parseInt(value) || 0;
+          value = numValue;
+        } else if (field === 'months') {
+          // Ensure months is between 1 and 12
+          const numValue = parseInt(value) || 0;
+          value = Math.min(Math.max(numValue, 1), 12);
+        }
       }
-    }
 
-    // Update the variant
-    newVariants[index] = {
-      ...variant,
-      [field]: value
-    };
+      // Update the variant
+      newVariants[index] = {
+        ...variant,
+        [field]: value
+      };
+    }
 
     // Update state and notify parent
     setVariants(newVariants);
@@ -529,27 +541,28 @@ const VariantForm: React.FC<VariantFormProps> = ({
           {variants.map((variant, index) => (
             <Card key={variant.$id || `new-variant-${index}`}>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                  <div className="space-y-2">
                     <Label>Price (₹)</Label>
                     <Input
                       type="number"
                       value={variant.price}
                       onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
                       min="0"
-                      step="0.01"
+                      step="1"
                       disabled={disabled}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
-                  </div>
-                  <div className="space-y-2">
+                  </div>                  <div className="space-y-2">
                     <Label>Sale Price (₹)</Label>
                     <Input
                       type="number"
-                      value={variant.sale_price}
+                      value={variant.sale_price === 0 ? '' : variant.sale_price}
                       onChange={(e) => handleVariantChange(index, 'sale_price', e.target.value)}
                       min="0"
-                      step="0.01"
+                      step="1"
                       disabled={disabled}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      placeholder="Optional"
                     />
                   </div>
                   <div className="space-y-2">
@@ -559,11 +572,11 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       value={variant.weight}
                       onChange={(e) => handleVariantChange(index, 'weight', e.target.value)}
                       min="0"
-                      step="0.01"
+                      step="1"
                       disabled={disabled}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
-                  </div>
-                  <div className="space-y-2">
+                  </div>                  <div className="space-y-2">
                     <Label>Stock</Label>
                     <Input
                       type="number"
@@ -571,6 +584,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       onChange={(e) => handleVariantChange(index, 'stock', e.target.value)}
                       min="0"
                       disabled={disabled}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   <div className="space-y-2">
@@ -581,6 +595,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                       onChange={(e) => handleVariantChange(index, 'months', e.target.value)}
                       min="1"
                       disabled={disabled}
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
                   </div>
                   <div className="space-y-2">

@@ -75,12 +75,24 @@ interface ProductFormProps {
 }
 
 export default function ProductForm({ initialData, onSubmit, onCancel, loading = false }: ProductFormProps) {
+  // Generate a slug from the initial name if one exists
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  };
+
+  const initialName = initialData?.name || '';
+  const initialSlug = initialData?.slug || (initialName ? generateSlug(initialName) : '');
+
   const [formData, setFormData] = useState<ProductFormData>({
-    name: initialData?.name || '',
+    name: initialName,
     description: initialData?.description || '',
     category: initialData?.category || '',
     tags: initialData?.tags || '',
-    slug: initialData?.slug || '',
+    slug: initialSlug,
     ingredients: initialData?.ingredients || '',
     variants: initialData?.variants.map(v => ({
       ...v,
@@ -122,10 +134,26 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // If the name field is being updated, also update the slug
+    if (name === 'name') {
+      const slug = value
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-'); // Replace multiple hyphens with a single hyphen
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        slug
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleVariantChange = (variants: Variant[]) => {
@@ -137,8 +165,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
 
   const handleMediaSelect = async (files: { fileId: string; url: string }[]) => {
     if (files.length === 0) return;
-    
-    try {
+      try {
       // Create product_video relationship for each video
       const videoPromises = files.map(async (file) => {
         const videoData = {
@@ -146,6 +173,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           videos: [file.url] // Store the video URL
         };
         
+        // No need to destructure since videoData doesn't have an $id property
         const result = await createDocument(
           process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_VIDEO_COLLECTION_ID!,
           videoData
@@ -258,10 +286,14 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
         ingredients: formData.ingredients,
         collections: collections,
         productVideo: formData.productVideo.map(v => v.fileId), // Store the relationship document IDs
-        variants: formData.variants.map(variant => ({
-          ...variant,
-          months: Math.min(Number(variant.months), 12)
-        }))
+        variants: formData.variants.map(variant => {
+          // Remove $id for new variants to avoid Appwrite error
+          const { $id, ...variantWithoutId } = variant;
+          return {
+            ...variantWithoutId,
+            months: Math.min(Number(variant.months), 12)
+          };
+        })
       };
 
       let productId: string;
@@ -307,8 +339,10 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           };
 
           if (variant.$id) {
+            // For existing variants, update with ID
             return productService.updateVariant(variant.$id, variantData);
           } else {
+            // For new variants, create without $id
             return createDocument(
               process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
               variantData
@@ -401,10 +435,8 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             placeholder="Enter tags separated by commas"
             disabled={loading}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug</Label>
+        </div>        <div className="space-y-2">
+          <Label htmlFor="slug">Slug (Auto-generated)</Label>
           <Input
             id="slug"
             name="slug"
@@ -412,8 +444,10 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             onChange={handleInputChange}
             placeholder="product-name"
             required
-            disabled={loading}
+            disabled={true}
+            className="bg-gray-100"
           />
+          <p className="text-xs text-gray-500 mt-1">Automatically generated from the product name</p>
         </div>
       </div>
 

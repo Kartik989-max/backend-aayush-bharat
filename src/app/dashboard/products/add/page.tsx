@@ -17,7 +17,11 @@ export default function AddProductPage() {
   const handleSubmit = async (formData: Product) => {
     try {
       setLoading(true);
-      await productService.createProduct(formData);
+      
+      // Strip out $id when creating a new product to avoid Appwrite error
+      const { $id, ...dataWithoutId } = formData;
+      
+      await productService.createProduct(dataWithoutId);
       toast.success('Product created successfully');
       router.push('/dashboard/products');
     } catch (error) {
@@ -54,4 +58,4 @@ export default function AddProductPage() {
       </Card>
     </div>
   );
-} 
+}

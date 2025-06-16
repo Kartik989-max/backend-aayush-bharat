@@ -100,11 +100,14 @@ export const productService = {
   },
 
   async createProduct(data: ProductFormData): Promise<Product> {
+    // Create a copy of the data without the $id property to avoid Appwrite error
+    const { $id, ...dataWithoutId } = data;
+    
     const response = await databases.createDocument(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_PRODUCT_COLLECTION_ID!,
       ID.unique(),
-      data
+      dataWithoutId
     );
     return response as unknown as Product;
   },
@@ -184,12 +187,16 @@ export const productService = {
   },
 
   async createVariant(data: Variants): Promise<Variants> {
+    // Create a copy of the data without the $id property to avoid Appwrite error
+    const { $id, ...dataWithoutId } = data;
+    
     const response = await databases.createDocument(
       process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
       process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
       ID.unique(),
-      data
+      dataWithoutId
     );
+    
     return {
       $id: response.$id,
       productId: response.productId as string,

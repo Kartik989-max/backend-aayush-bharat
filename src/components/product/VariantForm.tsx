@@ -603,8 +603,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
-                      )}
-                      <Button
+                      )}                      <Button
                         type="button"
                         variant="outline"
                         onClick={(e) => {
@@ -615,6 +614,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                           setShowMediaManager(true);
                         }}
                         disabled={disabled}
+                        formNoValidate
                       >
                         <ImageIcon className="h-4 w-4 mr-2" />
                         {variant.image ? "Change Image" : "Add Image"}
@@ -648,8 +648,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
-                      ))}
-                      <Button
+                      ))}                      <Button
                         type="button"
                         variant="outline"
                         onClick={(e) => {
@@ -660,6 +659,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
                           setShowMediaManager(true);
                         }}
                         disabled={disabled}
+                        formNoValidate
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Image
@@ -668,12 +668,13 @@ const VariantForm: React.FC<VariantFormProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-4 flex justify-end">
-                  <Button
+                <div className="mt-4 flex justify-end">                  <Button
+                    type="button"
                     variant="destructive"
                     size="sm"
                     onClick={() => handleRemoveVariant(index)}
                     disabled={disabled}
+                    formNoValidate
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Remove Variant
@@ -681,31 +682,35 @@ const VariantForm: React.FC<VariantFormProps> = ({
                 </div>
               </CardContent>
             </Card>
-          ))}
-
-          <Button
+          ))}          <Button
+            type="button"
             onClick={handleAddVariant}
             className="w-full"
             disabled={disabled}
+            formNoValidate
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Variant
           </Button>
-        </div>
-
-        <Dialog
+        </div>        <Dialog
           open={showMediaManager}
           onClose={() => setShowMediaManager(false)}
           title="Select Image"
         >
-          <div onClick={(e) => e.stopPropagation()}>
+          <form 
+            onSubmit={(e) => e.preventDefault()} 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
             <MediaManager
               onSelect={handleImageSelect}
               onClose={() => setShowMediaManager(false)}
               allowMultiple={isAdditionalImages}
               open={showMediaManager}
             />
-          </div>
+          </form>
         </Dialog>
       </CardContent>
     </Card>

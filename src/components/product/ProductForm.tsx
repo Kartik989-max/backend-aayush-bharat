@@ -469,14 +469,13 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           placeholder="Enter ingredients separated by commas"
           disabled={loading}
         />
-      </div>
-
-      <Dialog
+      </div>      <Dialog
         open={showMediaManager}
         onClose={() => setShowMediaManager(false)}
         title="Select Videos"
       >
-        <div 
+        <form 
+          onSubmit={(e) => e.preventDefault()} 
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -497,7 +496,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             allowMultiple={true}
             open={showMediaManager}
           />
-        </div>
+        </form>
       </Dialog>
 
       <Card>
@@ -528,8 +527,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
                 </Button>
               </div>
             ))}
-          </div>
-          <Button
+          </div>          <Button
             type="button"
             variant="outline"
             onClick={(e) => {
@@ -539,6 +537,7 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
             }}
             className="mt-4"
             disabled={loading}
+            formNoValidate
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Videos

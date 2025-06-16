@@ -11,6 +11,7 @@ interface Category {
   $id: string;
   name: string;
   description: string;
+  sub_text: string;
   image?: string;
 }
 
@@ -39,6 +40,7 @@ export default function EditCategoryPage({ params }: { params: Promise<{ id: str
           $id: doc.$id,
           name: doc.name,
           description: doc.description,
+          sub_text: doc.sub_text,
           image: doc.image
         });
       } else {

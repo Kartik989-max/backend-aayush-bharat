@@ -65,10 +65,8 @@ export default function Categories() {
   const { categories, loading } = useSelector((state: RootState) => state.categories);
 
   useEffect(() => {
-    if (categories.length === 0) {
-      dispatch(fetchCategories());
-    }
-  }, [categories, dispatch]);
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
   const handleDelete = async (categoryId: string) => {
     try {

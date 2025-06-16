@@ -65,12 +65,15 @@ const safeDatabaseOperation = async <T>(operation: () => Promise<T>): Promise<T>
 
 // Modified helper functions with connection check
 const createDocument = async (collectionId: string, data: any) => {
+    // Remove $id from data if it exists
+    const { $id, ...documentData } = data;
+    
     return safeDatabaseOperation(() => 
         databases.createDocument(
             process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
             collectionId,
             ID.unique(),
-            data,
+            documentData,
             [
                 Permission.read(Role.any()),
                 Permission.write(Role.any()),

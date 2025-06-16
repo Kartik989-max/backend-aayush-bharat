@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Loader2 } from "lucide-react";
 import { MediaManager } from '../media/MediaManager';
+import { Dialog } from '../ui/dialog';
 import type { Hero } from '@/services/HeroService';
 
 interface HeroFormProps {
@@ -77,6 +78,34 @@ const HeroForm = ({ onSubmit, onCancel, initialData }: HeroFormProps) => {
           <span className="block sm:inline">{error}</span>
         </div>
       )}
+
+      <Dialog
+        open={!!showMediaManager}
+        onClose={() => setShowMediaManager(false)}
+        title={showMediaManager === 'main' ? "Select Main Media" : "Select Mobile Media"}
+      >
+        <form 
+          onSubmit={(e) => e.preventDefault()} 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
+          <MediaManager
+            onSelect={handleMediaSelect}
+            onClose={() => setShowMediaManager(false)}
+            allowMultiple={false}
+            open={!!showMediaManager}
+            isForm={true}
+          />
+        </form>
+      </Dialog>
 
       <div className="grid grid-cols-2 gap-8">
         <div className="space-y-6">
@@ -265,25 +294,11 @@ const HeroForm = ({ onSubmit, onCancel, initialData }: HeroFormProps) => {
         </div>
       </div>
 
-      <MediaManager
-        open={!!showMediaManager}
-        onSelect={handleMediaSelect}
-        onClose={() => setShowMediaManager(false)}
-      />
-
-      <div className="flex items-center justify-end gap-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
+      <div className="flex gap-4">
+        <Button 
+          type="submit" 
+          className="flex-1"
           disabled={loading}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={loading}
-          className="min-w-[120px]"
         >
           {loading ? (
             <>
@@ -291,8 +306,17 @@ const HeroForm = ({ onSubmit, onCancel, initialData }: HeroFormProps) => {
               Saving...
             </>
           ) : (
-            <>{initialData ? 'Update' : 'Create'} Hero</>
+            initialData ? 'Update Hero' : 'Create Hero'
           )}
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline"
+          onClick={onCancel}
+          className="flex-1"
+          disabled={loading}
+        >
+          Cancel
         </Button>
       </div>
     </form>

@@ -96,15 +96,62 @@
   align-items: center;
   min-width: 90px;
   cursor: pointer;
+  position: relative;
 }
 
 .rdw-dropdown-optionwrapper {
   z-index: 100;
-  position: relative;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
   border: 1px solid var(--border);
   background-color: var(--background);
   border-radius: 3px;
   margin-top: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.rdw-dropdownoption-default {
+  padding: 8px 10px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.rdw-dropdownoption-highlighted {
+  background-color: var(--primary-light);
+}
+
+.rdw-dropdownoption-active {
+  background-color: var(--primary-light);
+}
+
+.rdw-dropdown-carettoopen {
+  border-top: 6px solid var(--foreground);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  position: absolute;
+  right: 10px;
+  top: 45%;
+}
+
+.rdw-dropdown-carettoclose {
+  border-bottom: 6px solid var(--foreground);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  position: absolute;
+  right: 10px;
+  top: 45%;
+}
+
+.rdw-dropdown-selectedtext {
+  display: flex;
+  position: relative;
+  height: 100%;
+  align-items: center;
+  padding: 0 12px 0 8px;
 }
 
 .rdw-editor-main:focus {
@@ -128,6 +175,24 @@
 :root[class~="dark"] .rdw-option-active {
   background-color: hsl(var(--primary) / 0.2);
   border-color: hsl(var(--primary) / 0.8);
+}
+
+:root[class~="dark"] .rdw-dropdown-wrapper {
+  background-color: hsl(var(--muted) / 0.5);
+  border-color: hsl(var(--border) / 0.3);
+}
+
+:root[class~="dark"] .rdw-dropdown-optionwrapper {
+  background-color: hsl(var(--muted) / 0.8);
+  border-color: hsl(var(--border) / 0.3);
+}
+
+:root[class~="dark"] .rdw-dropdownoption-highlighted {
+  background-color: hsl(var(--primary) / 0.2);
+}
+
+:root[class~="dark"] .rdw-dropdownoption-active {
+  background-color: hsl(var(--primary) / 0.2);
 }
 
 /* Placeholder styles */
@@ -186,4 +251,23 @@ blockquote {
 
 .rdw-editor-main li {
   margin-bottom: 0.25rem;
+}
+
+/* Style for block type dropdown options */
+.rdw-block-dropdown .rdw-dropdown-optionwrapper {
+  min-width: 120px;
+}
+
+.rdw-block-dropdown .rdw-dropdownoption-default {
+  padding: 8px 12px;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Fix editor height on smaller screens */
+@media (max-width: 768px) {
+  .rdw-editor-main {
+    min-height: 200px;
+  }
 }

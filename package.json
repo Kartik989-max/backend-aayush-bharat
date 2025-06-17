@@ -35,6 +35,7 @@
     "draft-js-export-html": "^1.4.1",
     "lucide-react": "^0.300.0",
     "next": "^15.1.7",
+    "quill": "^2.0.3",
     "react": "18.2.0",
     "react-chartjs-2": "5.2.0",
     "react-countup": "6.5.0",

@@ -156,10 +156,13 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
     }
   };
 
-  const handleVariantChange = (variants: Variant[]) => {
+  const handleVariantChange = (variants: Variants[]) => {
     setFormData(prev => ({
       ...prev,
-      variants
+      variants: variants.map(variant => ({
+        ...variant,
+        additionalImages: variant.additionalImages || []
+      }))
     }));
   };
 
@@ -564,7 +567,14 @@ export default function ProductForm({ initialData, onSubmit, onCancel, loading =
           className="flex-1"
           disabled={loading}
         >
-          {loading ? 'Saving...' : initialData ? 'Update Product' : 'Create Product'}
+          {loading ? (
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              {initialData ? 'Updating...' : 'Creating...'}
+            </div>
+          ) : (
+            initialData ? 'Update Product' : 'Create Product'
+          )}
         </Button>
         <Button 
           type="button" 

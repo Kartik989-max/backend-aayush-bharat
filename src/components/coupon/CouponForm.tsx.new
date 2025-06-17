@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createDocument, databases } from '@/lib/appwrite';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -14,10 +14,20 @@ interface CouponFormProps {
   onSubmit: (data: any) => void;
   initialData?: any;
   onCancel: () => void;
-  isEditing?: boolean;
 }
 
-const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: CouponFormProps) => {const [formData, setFormData] = useState({
+interface Coupon {
+  $id: string;
+  coupon_code: string;
+  min_price: number;
+  expiry_date: string;
+  description?: string;
+  coupon_discount: number;
+  discount_type: 'percentage' | 'flat';
+}
+
+const CouponForm = ({ onSubmit, initialData, onCancel }: CouponFormProps) => {
+  const [formData, setFormData] = useState({
     coupon_code: initialData?.coupon_code || '',
     min_price: initialData?.min_price || '',
     expiry_date: initialData?.expiry_date ? new Date(initialData.expiry_date).toISOString().split('T')[0] : '',
@@ -27,7 +37,25 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkingCode, setCheckingCode] = useState(false);  const validateForm = () => {
+
+  const checkDuplicateCouponCode = async (couponCode: string) => {
+    try {
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_COUPON_COLLECTION_ID!
+      );
+      return response.documents.some(coupon => 
+        coupon.coupon_code === couponCode && 
+        // If editing, exclude the current coupon from duplicate check
+        (!initialData || coupon.$id !== initialData.$id)
+      );
+    } catch (error) {
+      console.error('Error checking for duplicate coupon:', error);
+      return false;
+    }
+  };
+
+  const validateForm = () => {
     if (!formData.coupon_code) return 'Coupon code is required';
     if (!formData.min_price || formData.min_price < 0) return 'Minimum price must be 0 or greater';
     if (!formData.expiry_date) return 'Expiry date is required';
@@ -47,7 +75,9 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
     if (formData.description && formData.description.split(' ').length > 50) 
       return 'Description cannot exceed 50 words';
     return null;
-  };const handleSubmit = async (e: React.FormEvent) => {
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validationError = validateForm();
     if (validationError) {
@@ -58,18 +88,11 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
     setLoading(true);
     setError(null);
 
-    try {      // Only check for duplicates when creating a new coupon, not when editing
+    try {
+      // Check for duplicate coupon code
+      // Only check for duplicates when creating a new coupon
       if (!initialData) {
-        // Direct check for duplicate coupon code
-        const response = await databases.listDocuments(
-          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-          process.env.NEXT_PUBLIC_APPWRITE_COUPON_COLLECTION_ID!
-        );
-        
-        const isDuplicate = response.documents.some(coupon => 
-          coupon.coupon_code === formData.coupon_code
-        );
-        
+        const isDuplicate = await checkDuplicateCouponCode(formData.coupon_code);
         if (isDuplicate) {
           setError('A coupon with this code already exists');
           setLoading(false);
@@ -83,10 +106,12 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
         coupon_discount: parseInt(formData.coupon_discount),
         expiry_date: new Date(formData.expiry_date).toISOString(),
         discount_type: formData.discount_type
-      };      let result;
-      if (initialData && initialData.$id) {
-        console.log(`Updating coupon with ID: ${initialData.$id}`);
-        // Update existing coupon - direct Appwrite call
+      };
+
+      let result;
+      if (initialData) {
+        // Update existing coupon
+        console.log(`Updating existing coupon with ID: ${initialData.$id}`);
         result = await databases.updateDocument(
           process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
           process.env.NEXT_PUBLIC_APPWRITE_COUPON_COLLECTION_ID!,
@@ -94,14 +119,13 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
           processedData
         );
       } else {
+        // Create new coupon
         console.log('Creating new coupon');
-        // Create new coupon - direct Appwrite call
         result = await createDocument(
           process.env.NEXT_PUBLIC_APPWRITE_COUPON_COLLECTION_ID!,
           processedData
         );
       }
-      
       onSubmit(result);
     } catch (error: any) {
       console.error('Form submission failed:', error);
@@ -110,6 +134,8 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
       setLoading(false);
     }
   };
+
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -120,7 +146,8 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">        <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
           <Label htmlFor="coupon_code">Coupon Code</Label>
           <Input
             id="coupon_code"
@@ -130,9 +157,6 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
             placeholder="SUMMER2024"
             required
           />
-          {checkingCode && (
-            <p className="text-xs text-muted-foreground">Checking coupon code...</p>
-          )}
         </div>
 
         <div className="space-y-2">
@@ -187,7 +211,7 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
             type="date"
             value={formData.expiry_date}
             onChange={(e) => setFormData({...formData, expiry_date: e.target.value})}
-            min={new Date().toISOString().split('T')[0]}
+            min={today}
             required
           />
         </div>
@@ -277,7 +301,8 @@ const CouponForm = ({ onSubmit, initialData, onCancel, isEditing = false }: Coup
         </Card>
       </div>
 
-      <div className="flex gap-4">        <Button 
+      <div className="flex gap-4">
+        <Button 
           type="submit"  
           className="flex-1"
           disabled={loading}

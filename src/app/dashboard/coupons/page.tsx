@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { databases } from '@/lib/appwrite';
 import { Pencil, Trash2, RefreshCw, Plus } from 'lucide-react';
 import CouponForm from '@/components/coupon/CouponForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { databases } from '@/lib/appwrite';
 
 interface Coupon {
   $id: string;
@@ -13,7 +13,7 @@ interface Coupon {
   expiry_date: string;
   description?: string;
   coupon_discount: number;
-  discount_type: 'percentage' | 'flat';  // Add this field
+  discount_type: 'percentage' | 'flat';
 }
 
 interface RenewModalProps {
@@ -86,9 +86,7 @@ const CouponsPage = () => {
 
   useEffect(() => {
     fetchCoupons();
-  }, []);
-
-  const fetchCoupons = async () => {
+  }, []);  const fetchCoupons = async () => {
     try {
       setLoading(true);
       const response = await databases.listDocuments(
@@ -102,14 +100,11 @@ const CouponsPage = () => {
       setLoading(false);
     }
   };
-
   const handleFormSubmit = async () => {
     await fetchCoupons();
     setShowForm(false);
     setSelectedCoupon(null);
-  };
-
-  const handleDelete = async (couponId: string) => {
+  };const handleDelete = async (couponId: string) => {
     try {
       await databases.deleteDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
@@ -121,14 +116,9 @@ const CouponsPage = () => {
     } catch (error) {
       console.error('Error deleting coupon:', error);
     }
-  };
-
-  const handleRenew = async (couponId: string, newExpiryDate: string) => {
+  };  const handleRenew = async (couponId: string, newExpiryDate: string) => {
     try {
       setLoading(true);
-      const coupon = coupons.find(c => c.$id === couponId);
-      if (!coupon) return;
-      
       await databases.updateDocument(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         process.env.NEXT_PUBLIC_APPWRITE_COUPON_COLLECTION_ID!,
@@ -137,7 +127,6 @@ const CouponsPage = () => {
           expiry_date: new Date(newExpiryDate).toISOString()
         }
       );
-      
       await fetchCoupons();
       setRenewCoupon(null);
     } catch (error) {
@@ -191,9 +180,7 @@ const CouponsPage = () => {
 
         
 
-      </div>
-
-      {showForm && (
+      </div>      {showForm && (
         <div className="mb-6">
           <CouponForm
             onSubmit={handleFormSubmit}
@@ -202,6 +189,7 @@ const CouponsPage = () => {
               setShowForm(false);
               setSelectedCoupon(null);
             }}
+            isEditing={!!selectedCoupon}
           />
         </div>
       )}
@@ -222,8 +210,7 @@ const CouponsPage = () => {
                 <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
                 
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <div className="flex gap-2 bg-dark-100/90 p-2 rounded-lg">
-                    <Button
+                  <div className="flex gap-2 bg-dark-100/90 p-2 rounded-lg">            <Button
                       onClick={() => {
                         setSelectedCoupon(coupon);
                         setShowForm(true);

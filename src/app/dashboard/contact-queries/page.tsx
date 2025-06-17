@@ -56,18 +56,21 @@ const ContactQueriesPage = () => {
       const response = await databases.listDocuments(
         process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
         '68287c8b0025dba5763e'
-      );
-
-      const mappedQueries = response.documents.map((doc) => ({
+      );      const mappedQueries = response.documents.map((doc) => ({
         $id: doc.$id,
         email: doc.email || '',
         fullname: doc.fullname || '',
         message: doc.message || '',
         createdAt: doc.$createdAt || '',
       }));
+      
+      // Sort queries by createdAt date in descending order (newest first)
+      const sortedQueries = [...mappedQueries].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
-      setQueries(mappedQueries);
-      setFilteredQueries(mappedQueries);
+      setQueries(sortedQueries);
+      setFilteredQueries(sortedQueries);
       setTotalPages(Math.ceil(mappedQueries.length / ITEMS_PER_PAGE));
     } catch (error) {
       console.error('Error fetching contact queries:', error);

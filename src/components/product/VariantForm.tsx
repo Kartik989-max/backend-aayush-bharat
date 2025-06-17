@@ -72,6 +72,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [currentVariantIndex, setCurrentVariantIndex] = useState<number | null>(null);
   const [isAdditionalImages, setIsAdditionalImages] = useState(false);
+  const [removingVariantIndex, setRemovingVariantIndex] = useState<number | null>(null);
 
   // Notify parent component of variant changes
   useEffect(() => {
@@ -260,44 +261,40 @@ const VariantForm: React.FC<VariantFormProps> = ({
   };
 
   // Remove a variant
-  const removeVariant = async (index: number) => {
+  const handleRemoveVariant = async (index: number) => {
     if (variants.length <= 1) {
       toast.error("Cannot delete the last variant");
       return;
     }
 
     const variant = variants[index];
-
-    // If no productId or no variant.$id, just remove from UI
-    if (!productId || !variant.$id) {
-      const updatedVariants = variants.filter((_, i) => i !== index);
-      setVariants(updatedVariants);
-      return;
-    }
-
-    if (!window.confirm('Are you sure you want to delete this variant?')) {
-      return;
-    }
+    setRemovingVariantIndex(index);
 
     try {
-      setLoading(true);
-
-      await databases.deleteDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-        process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
-        variant.$id
-      );
+      // If we have a productId and variant.$id, delete from database
+      if (productId && variant.$id) {
+        await databases.deleteDocument(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_VARIANT_COLLECTION_ID!,
+          variant.$id
+        );
+      }
 
       // Update local state
-      const updatedVariants = variants.filter((_, i) => i !== index);
-      setVariants(updatedVariants);
+      const newVariants = variants.filter((_, i) => i !== index);
+      setVariants(newVariants);
+      
+      // Notify parent component
+      if (onChange) {
+        onChange(newVariants);
+      }
 
-      toast.success("Variant deleted successfully");
+      toast.success("Variant removed successfully");
     } catch (error) {
       console.error('Error removing variant:', error);
-      toast.error("Failed to delete variant");
+      toast.error("Failed to remove variant");
     } finally {
-      setLoading(false);
+      setRemovingVariantIndex(null);
     }
   };
 
@@ -419,7 +416,9 @@ const VariantForm: React.FC<VariantFormProps> = ({
       console.error("Error creating variants:", error);
       toast.error("Failed to create variants");
     }
-  };const handleAddVariant = () => {
+  };
+
+  const handleAddVariant = () => {
     // Don't create more than one empty variant
     const hasEmptyVariant = variants.some(v => 
       v.price === 0 && v.weight === 0 && v.stock === 0
@@ -441,13 +440,16 @@ const VariantForm: React.FC<VariantFormProps> = ({
       additionalImages: [],
     };
     
-    if (onChange) onChange([...variants, newVariant]);
+    // Update local state
+    setVariants(prev => [...prev, newVariant]);
+    
+    // Notify parent component
+    if (onChange) {
+      onChange([...variants, newVariant]);
+    }
   };
 
-  const handleRemoveVariant = (index: number) => {
-    const newVariants = variants.filter((_, i) => i !== index);
-    if (onChange) onChange(newVariants);
-  };  const handleVariantChange = (
+  const handleVariantChange = (
     index: number,
     field: VariantField,
     value: string | number
@@ -683,16 +685,26 @@ const VariantForm: React.FC<VariantFormProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-4 flex justify-end">                  <Button
+                <div className="mt-4 flex justify-end">
+                  <Button
                     type="button"
                     variant="destructive"
                     size="sm"
                     onClick={() => handleRemoveVariant(index)}
-                    disabled={disabled}
+                    disabled={disabled || removingVariantIndex === index}
                     formNoValidate
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove Variant
+                    {removingVariantIndex === index ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Removing...
+                      </div>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove Variant
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -724,6 +736,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
               onClose={() => setShowMediaManager(false)}
               allowMultiple={isAdditionalImages}
               open={showMediaManager}
+              isForm={true}
             />
           </form>
         </Dialog>

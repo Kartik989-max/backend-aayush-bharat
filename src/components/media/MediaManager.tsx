@@ -11,12 +11,14 @@ import { Dialog } from "../ui/dialog";
 import { Card, CardContent } from "../ui/card";
 import { cn } from "@/lib/utils";
 import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface MediaManagerProps {
   onSelect: (files: { fileId: string; url: string; mimeType?: string }[]) => void;
-  onClose: () => void;
+  onClose?: () => void;
   allowMultiple?: boolean;
   open: boolean;
+  isForm?: boolean;
 }
 
 interface UploadProgressProps {
@@ -39,7 +41,7 @@ const UploadProgress = ({ fileName, progress }: UploadProgressProps) => (
   </div>
 );
 
-export function MediaManager({ onSelect, onClose, allowMultiple = false, open }: MediaManagerProps) {
+export function MediaManager({ onSelect, onClose, allowMultiple = false, open, isForm = false }: MediaManagerProps) {
   const [mediaType, setMediaType] = useState<"image" | "video">("image");
   const [files, setFiles] = useState<Models.File[]>([]);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -49,6 +51,7 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [uploading, setUploading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter();
 
   const itemsPerPage = 12;
   const totalPages = Math.ceil(totalFiles / itemsPerPage);
@@ -164,9 +167,9 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
     );
   };
 
-  return (
-    <Dialog open={open} onClose={onClose} title="Media Library">
-      <div className="flex flex-col h-[80vh]">
+  const content = (
+    <div className="flex flex-col h-[80vh]">
+      {!isForm && (
         <div className="flex border-b text-white border-gray-200">
           <Button
             variant={tab === "browse" ? "default" : "ghost"}
@@ -183,7 +186,14 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
           </Button>
           <Button
             variant={tab === "upload" ? "default" : "ghost"}
-            onClick={() => setTab("upload")}
+            onClick={() => {
+              if (isForm) {
+                router.push('/dashboard/media');
+                if (onClose) onClose();
+              } else {
+                setTab("upload");
+              }
+            }}
             className={cn(
               "rounded-none border-b-2 border-transparent",
               tab === "upload" 
@@ -195,177 +205,179 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
             Upload
           </Button>
         </div>
+      )}
 
-        <div className="flex gap-2 p-4 border-b">
-          <Button
-            variant={mediaType === "image" ? "default" : "outline"}
-            onClick={() => {
-              setMediaType("image");
-              setSelected([]);
-            }}
-            className={mediaType === "image" ? "text-white" : "text-foreground"}
-          >
-            Images
-          </Button>
-          <Button
-            variant={mediaType === "video" ? "default" : "outline"}
-            onClick={() => {
-              setMediaType("video");
-              setSelected([]);
-            }}
-            className={mediaType === "video" ? "text-white" : "text-foreground"}
-          >
-            Videos
-          </Button>
-        </div>
+      <div className="flex gap-2 p-4 border-b">
+        <Button
+          variant={mediaType === "image" ? "default" : "outline"}
+          onClick={() => {
+            setMediaType("image");
+            setSelected([]);
+          }}
+          className={mediaType === "image" ? "text-white" : "text-foreground"}
+        >
+          Images
+        </Button>
+        <Button
+          variant={mediaType === "video" ? "default" : "outline"}
+          onClick={() => {
+            setMediaType("video");
+            setSelected([]);
+          }}
+          className={mediaType === "video" ? "text-white" : "text-foreground"}
+        >
+          Videos
+        </Button>
+      </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          {tab === "browse" ? (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <Input
-                  type="text"
-                  placeholder="Search media..."
-                  className="w-1/2"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                {selected.length > 0 && (
-                  <Button
-                    onClick={handleDelete}
-                    variant="destructive"
-                    className="text-white hover:text-white/90"
-                  >
-                    Delete Selected
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-4 gap-4">
-                {files
-                  .filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map((file) => (
-                    <Card
-                      key={file.$id}
-                      className={cn(
-                        "cursor-pointer overflow-hidden group aspect-square",
-                        selected.includes(file.$id) && "ring-2 ring-primary"
-                      )}
-                      onClick={() => toggleSelection(file.$id)}
-                    >
-                      <CardContent className="p-0 relative h-full">
-                        {mediaType === "video" || file.mimeType.startsWith("video/") ? (
-                          <video
-                            src={getFilePreview(file.$id, bucketIds.video)}
-                            className="object-cover w-full h-full"
-                            preload="metadata"
-                            controls
-                          />
-                        ) : (
-                          <Image
-                            src={getFilePreview(file.$id, bucketIds.image)}
-                            alt={file.name}
-                            width={500}
-                            height={500}
-                            className="object-cover w-full h-full"
-                          />
-                        )}
-                        {selected.includes(file.$id) && (
-                          <div className="absolute top-2 right-2 bg-white rounded-full p-1">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 text-primary"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                        <p className="text-center text-sm mt-1 truncate p-2">{file.name}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-
-              <div className="flex justify-center items-center gap-4 mt-6">
+      <div className="flex-1 overflow-y-auto p-4">
+        {tab === "browse" ? (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <Input
+                type="text"
+                placeholder="Search media..."
+                className="w-1/2"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {selected.length > 0 && (
                 <Button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  variant="outline"
+                  onClick={handleDelete}
+                  variant="destructive"
+                  className="text-white hover:text-white/90"
                 >
-                  Previous
+                  Delete Selected
                 </Button>
-                <span>
-                  Page {currentPage} of {totalPages || 1}
-                </span>
-                <Button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="p-4">
-              <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                <input
-                  type="file"
-                  multiple={allowMultiple}
-                  accept={mediaType === "video" ? "video/*" : "image/*"}
-                  onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-                  className="hidden"
-                  id="file-upload"
-                  disabled={uploading}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer inline-flex flex-col items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    {uploading ? (
-                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                    ) : (
-                      <Plus className="w-6 h-6 text-primary" />
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {uploading ? (
-                      "Uploading..."
-                    ) : (
-                      <>
-                        <span className="font-medium text-primary">Click to upload</span> or drag and drop
-                        <br />
-                        {mediaType === "video" ? "MP4, WebM, MOV up to 100MB" : "PNG, JPG, GIF up to 10MB"}
-                      </>
-                    )}
-                  </div>
-                </label>
-              </div>
-
-              {Object.keys(uploadProgress).length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-medium mb-4">Upload Progress</h3>
-                  {Object.entries(uploadProgress).map(([fileId, progress]) => (
-                    <UploadProgress
-                      key={fileId}
-                      fileName={files.find(f => f.$id === fileId)?.name || fileId}
-                      progress={progress}
-                    />
-                  ))}
-                </div>
               )}
             </div>
-          )}
-        </div>
 
-        <div className="p-4 border-t border-gray-200 flex justify-between items-center">
+            <div className="grid grid-cols-4 gap-4">
+              {files
+                .filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                .map((file) => (
+                  <Card
+                    key={file.$id}
+                    className={cn(
+                      "cursor-pointer overflow-hidden group aspect-square",
+                      selected.includes(file.$id) && "ring-2 ring-primary"
+                    )}
+                    onClick={() => toggleSelection(file.$id)}
+                  >
+                    <CardContent className="p-0 relative h-full">
+                      {mediaType === "video" || file.mimeType.startsWith("video/") ? (
+                        <video
+                          src={getFilePreview(file.$id, bucketIds.video)}
+                          className="object-cover w-full h-full"
+                          preload="metadata"
+                          controls
+                        />
+                      ) : (
+                        <Image
+                          src={getFilePreview(file.$id, bucketIds.image)}
+                          alt={file.name}
+                          width={500}
+                          height={500}
+                          className="object-cover w-full h-full"
+                        />
+                      )}
+                      {selected.includes(file.$id) && (
+                        <div className="absolute top-2 right-2 bg-white rounded-full p-1">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-primary"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                      <p className="text-center text-sm mt-1 truncate p-2">{file.name}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+
+            <div className="flex justify-center items-center gap-4 mt-6">
+              <Button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                variant="outline"
+              >
+                Previous
+              </Button>
+              <span>
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <Button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                variant="outline"
+              >
+                Next
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="p-4">
+            <div className="border-2 border-dashed rounded-lg p-8 text-center">
+              <input
+                type="file"
+                multiple={allowMultiple}
+                accept={mediaType === "video" ? "video/*" : "image/*"}
+                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                className="hidden"
+                id="file-upload"
+                disabled={uploading}
+              />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer inline-flex flex-col items-center gap-4"
+              >
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  {uploading ? (
+                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  ) : (
+                    <Plus className="w-6 h-6 text-primary" />
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {uploading ? (
+                    "Uploading..."
+                  ) : (
+                    <>
+                      <span className="font-medium text-primary">Click to upload</span> or drag and drop
+                      <br />
+                      {mediaType === "video" ? "MP4, WebM, MOV up to 100MB" : "PNG, JPG, GIF up to 10MB"}
+                    </>
+                  )}
+                </div>
+              </label>
+            </div>
+
+            {Object.keys(uploadProgress).length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium mb-4">Upload Progress</h3>
+                {Object.entries(uploadProgress).map(([fileId, progress]) => (
+                  <UploadProgress
+                    key={fileId}
+                    fileName={files.find(f => f.$id === fileId)?.name || fileId}
+                    progress={progress}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t border-gray-200 flex justify-between items-center">
+        {onClose && (
           <Button 
             variant="outline" 
             onClick={onClose}
@@ -373,27 +385,36 @@ export function MediaManager({ onSelect, onClose, allowMultiple = false, open }:
           >
             Cancel
           </Button>
-          <Button
-            onClick={() => {
-              const selectedData = selected.map((id) => {
-                const file = files.find(f => f.$id === id);
-                const isVideo = file?.mimeType?.startsWith("video/");
-                return {
-                  fileId: id,
-                  url: getFilePreview(id, isVideo ? bucketIds.video : bucketIds.image),
-                  mimeType: file?.mimeType
-                };
-              });
-              onSelect(selectedData);
-              onClose();
-            }}
-            disabled={selected.length === 0}
-            className="text-white"
-          >
-            Select ({selected.length})
-          </Button>
-        </div>
+        )}
+        <Button
+          onClick={() => {
+            const selectedData = selected.map((id) => {
+              const file = files.find(f => f.$id === id);
+              const isVideo = file?.mimeType?.startsWith("video/");
+              return {
+                fileId: id,
+                url: getFilePreview(id, isVideo ? bucketIds.video : bucketIds.image),
+                mimeType: file?.mimeType
+              };
+            });
+            onSelect(selectedData);
+            if (onClose) onClose();
+          }}
+          disabled={selected.length === 0}
+          className="text-white ml-auto"
+        >
+          Select ({selected.length})
+        </Button>
       </div>
-    </Dialog>
+    </div>
   );
+
+  if (!open) return null;
+
+  // If onClose is provided, wrap in Dialog, otherwise render content directly
+  return onClose ? (
+    <Dialog open={open} onClose={onClose} title="Media Library">
+      {content}
+    </Dialog>
+  ) : content;
 }

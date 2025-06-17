@@ -21,6 +21,7 @@ interface Category {
   $id: string;
   name: string;
   description: string;
+  sub_text: string;
   image?: string;
 }
 
@@ -35,6 +36,7 @@ export default function CategoryForm({ initialData, onSubmit, onCancel, loading 
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
+    sub_text: initialData?.sub_text || '',
     image: initialData?.image || ''
   });
 
@@ -78,10 +80,12 @@ export default function CategoryForm({ initialData, onSubmit, onCancel, loading 
     setError(null);
 
     try {
+      // Create category data without $id
       const categoryData = {
         name: formData.name,
         description: formData.description,
-        image: formData.image
+        sub_text: formData.sub_text,
+        image: formData.image || '' // Ensure image is always a string
       };
 
       let categoryId: string;
@@ -109,6 +113,7 @@ export default function CategoryForm({ initialData, onSubmit, onCancel, loading 
         $id: categoryId,
         name: categoryData.name,
         description: categoryData.description,
+        sub_text: categoryData.sub_text,
         image: categoryData.image
       };
 
@@ -135,6 +140,18 @@ export default function CategoryForm({ initialData, onSubmit, onCancel, loading 
           id="name"
           name="name"
           value={formData.name}
+          onChange={handleInputChange}
+          required
+          disabled={loading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="sub_text">Sub Text</Label>
+        <Input
+          id="sub_text"
+          name="sub_text"
+          value={formData.sub_text}
           onChange={handleInputChange}
           required
           disabled={loading}

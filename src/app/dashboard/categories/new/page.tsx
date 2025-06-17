@@ -3,22 +3,23 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import CategoryForm from '@/components/category/CategoryForm';
 import Link from 'next/link';
-import { databases, ID } from '@/lib/appwrite';
+import { createDocument } from '@/lib/appwrite';
+import { toast } from 'react-toastify';
 
 export default function NewCategory() {
   const router = useRouter();
 
   const handleSubmit = async (data: any) => {
     try {
-      await databases.createDocument(
-        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+      await createDocument(
         process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_COLLECTION_ID!,
-        ID.unique(),
         data
       );
+      toast.success('Category created successfully');
       router.push('/dashboard/categories');
     } catch (error) {
       console.error('Error creating category:', error);
+      toast.error('Failed to create category');
     }
   };
 

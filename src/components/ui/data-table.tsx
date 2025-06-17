@@ -28,10 +28,9 @@ export function DataTable<TData extends Record<string, any>>({
   data,
   searchKey,
   loading = false,
-}: DataTableProps<TData>) {
-  const [filtering, setFiltering] = useState('');
+}: DataTableProps<TData>) {  const [filtering, setFiltering] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [sortByDate, setSortByDate] = useState(false);
+  const [sortByDate, setSortByDate] = useState(true);
 
   const processedData = useMemo(() => {
     let result = [...data];

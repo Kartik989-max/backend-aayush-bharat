@@ -650,18 +650,7 @@ export default function OrderDetailsPage() {
                       </SelectContent>
                     </Select>
                     
-                    {order.shipping_status === 'shipped' || statusOptions.includes('shipped') ? (
-                      <div>
-                        <Label htmlFor="delivery-charges" className="mb-1">Delivery Charges (₹)</Label>
-                        <Input
-                          id="delivery-charges"
-                          type="number"
-                          value={deliveryCharges}
-                          onChange={(e) => setDeliveryCharges(e.target.value)}
-                          placeholder="Enter delivery charges"
-                        />
-                      </div>
-                    ) : null}
+                   
                   </div>
                 </div>
               </div>

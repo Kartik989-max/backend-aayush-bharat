@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
 
 interface VariantCardProps {
-  variant: VariantType;
+  variant: VariantType & { quantity?: number };
 }
 
 export function VariantCard({ variant }: VariantCardProps) {
@@ -36,7 +36,7 @@ export function VariantCard({ variant }: VariantCardProps) {
   }
     return (
     <Card className="overflow-hidden border border-border h-[350px] hover:shadow-md transition-shadow">
-      <div className="relative aspect-square h-[50%] w-full bg-muted">
+      <div className="relative aspect-square h-[40%] w-full bg-muted">
         {hasValidImage ? (
           <Image 
             src={imageUrl!} 
@@ -101,6 +101,11 @@ export function VariantCard({ variant }: VariantCardProps) {
           <div className="font-semibold text-xs truncate max-w-[120px]" title={variant.$id || 'N/A'}>
             {variant.$id || 'N/A'}
           </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="font-medium text-sm text-muted-foreground">Quantity:</div>
+          <div className="font-semibold text-blue-600">{variant.quantity || 1}</div>
         </div>
       </CardContent>
     </Card>

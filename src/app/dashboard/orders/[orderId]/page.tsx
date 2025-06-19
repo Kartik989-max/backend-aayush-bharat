@@ -30,6 +30,7 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();  const [order, setOrder] = useState<OrderType | null>(null);
   const [orderVariants, setOrderVariants] = useState<VariantType[]>([]);
+  const [orderProducts, setOrderProducts] = useState<any[]>([]); // Array of all products in the order
   const [productData, setProductData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [variantsLoading, setVariantsLoading] = useState(true);
@@ -50,7 +51,10 @@ export default function OrderDetailsPage() {
     calculatedWeightGrams: 0,
     calculatedWeightKg: 0,
     hasMinimumWeightApplied: false
-  });useEffect(() => {
+  });
+  const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({}); // variantId -> quantity
+
+  useEffect(() => {
     loadOrder();
   }, [orderId]);
   
@@ -122,13 +126,13 @@ export default function OrderDetailsPage() {
   };
 
   const loadProductDetails = async () => {
-    if (!order?.product_id) return;
-    
+    if (!order?.order_variants) return;
     try {
       setProductLoading(true);
-      const data = await productService.getProductWithVariants(order.product_id);
-      setProductData(data);
-      console.log('Product data loaded:', data);
+      const orderVariantsObj = JSON.parse(order.order_variants);
+      const productIds = Object.keys(orderVariantsObj);
+      const products = await Promise.all(productIds.map(pid => productService.getProductWithVariants(pid)));
+      setOrderProducts(products);
     } catch (error) {
       console.error('Error loading product details:', error);
       toast({
@@ -146,24 +150,28 @@ export default function OrderDetailsPage() {
       setVariantsLoading(false);
       return;
     }
-    
     try {
       setVariantsLoading(true);
-      
-      console.log('Loading variants for order:', {
-        orderId: order.$id,
-        orderVariants: order.order_variants
-      });
-      
-      const variantsData = await orderService.getVariantsForOrder(order.order_variants);
-      
-      console.log('Loaded variants:', variantsData);
-      
-      if (variantsData.length === 0) {
-        console.warn('No variants found for order', order.$id);
+      const orderVariantsObj = JSON.parse(order.order_variants);
+      // Support both old and new formats
+      let variantIds: string[] = [];
+      let variantQtyMap: Record<string, number> = {};
+      for (const [productId, value] of Object.entries(orderVariantsObj)) {
+        if (typeof value === 'string') {
+          variantIds.push(value);
+          variantQtyMap[value] = 1;
+        } else if (typeof value === 'object' && value !== null) {
+          const v = value as any;
+          variantIds.push(v.variantId);
+          variantQtyMap[v.variantId] = Number(v.quantity) || 1;
+        }
       }
-      
-      setOrderVariants(variantsData);
+      setVariantQuantities(variantQtyMap);
+      // Fetch all variants
+      const variantsData = await Promise.all(
+        variantIds.map(id => orderService.getVariantsForOrder(JSON.stringify({dummy: id})).then(arr => arr[0]).catch(() => null))
+      );
+      setOrderVariants((variantsData.filter(Boolean) as VariantType[]));
     } catch (error) {
       console.error('Error loading order variants:', error);
       toast({
@@ -492,26 +500,22 @@ export default function OrderDetailsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3"><InfoRow label="Total Items" value={order.order_items?.toString() || '0'} />
-              <InfoRow label="Product ID" value={order.product_id} />
-              
+              {/* Show all product IDs and names */}
               {productLoading ? (
                 <div className="flex flex-col sm:flex-row sm:justify-between">
-                  <span className="text-muted-foreground">Product Name:</span>
+                  <span className="text-muted-foreground">Product Names:</span>
                   <Shimmer type="text" className="w-32" />
                 </div>
-              ) : productData ? (
+              ) : orderProducts.length > 0 ? (
                 <div className="flex flex-col space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Product Name:</span>
-                    <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200 font-medium">
-                      {productData.name}
-                    </Badge>
-                  </div>
-                  {productData.description && (
-                    <div className="text-sm text-muted-foreground">
-                      <span className="font-medium line-clamp-1">Description:</span> {productData.description}
+                  {orderProducts.map((prod, idx) => (
+                    <div key={prod.$id || idx} className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200 font-medium">
+                        {prod.name}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">(ID: {prod.$id})</span>
                     </div>
-                  )}
+                  ))}
                 </div>
               ) : null}              {productData && (
                 <>
@@ -560,7 +564,7 @@ export default function OrderDetailsPage() {
               ) : orderVariants.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {orderVariants.map((variant) => (
-                    <VariantCard key={variant.$id} variant={variant} />
+                    <VariantCard key={variant.$id} variant={{...variant, quantity: variantQuantities[variant.$id] || 1}} />
                   ))}
                 </div>
               ) : (

@@ -295,8 +295,8 @@ export default function OrderDetailsPage() {
       // Construct shipment data for Shiprocket
       const shipmentRequestData = {
         order_id: order.$id,
-        order_date: new Date(order.created_at).toISOString().split('T')[0],
-        pickup_location: "Primary",
+        order_date: new Date(order.$createdAt).toISOString().split('T')[0],
+        pickup_location: "Home",
         channel_id: "",
         comment: "Created from admin dashboard",
         billing_customer_name: `${order.first_name} ${order.last_name}`,

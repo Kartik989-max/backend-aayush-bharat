@@ -3,7 +3,7 @@
 import { Order } from '@/components/order/Order';
 import { orderService, PaginatedOrdersResponse } from '@/services/orderService';
 import { OrderType } from '@/types/order';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Shimmer } from '@/components/ui/shimmer';
 
 export default function OrdersPage() {
@@ -19,34 +19,32 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortByLatest, setSortByLatest] = useState(true);
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response: PaginatedOrdersResponse = await orderService.getOrdersPaginated(
-        pagination.page,
-        pagination.limit,
-        search,
-        statusFilter,
-        sortByLatest
-      );
-      
-      setOrders(response.orders);
-      setPagination({
-        page: response.page,
-        limit: response.limit,
-        total: response.total,
-        totalPages: response.totalPages,
-      });
-    } catch (error) {
-      console.error('Error loading orders:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.page, pagination.limit, search, statusFilter, sortByLatest]);
-
+  // Fetch orders whenever pagination, search, filter, or sort changes
   useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const response: PaginatedOrdersResponse = await orderService.getOrdersPaginated(
+          pagination.page,
+          pagination.limit,
+          search,
+          statusFilter,
+          sortByLatest
+        );
+        setOrders(response.orders);
+        setPagination(prev => ({
+          ...prev,
+          total: response.total,
+          totalPages: response.totalPages,
+        }));
+      } catch (error) {
+        console.error('Error loading orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchOrders();
-  }, [fetchOrders]);
+  }, [pagination.page, pagination.limit, search, statusFilter, sortByLatest]);
 
   const handlePaginationChange = (page: number, limit: number) => {
     setPagination(prev => ({ ...prev, page, limit }));
@@ -54,17 +52,17 @@ export default function OrdersPage() {
 
   const handleSearchChange = (searchValue: string) => {
     setSearch(searchValue);
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page on search
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(status);
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page on filter
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleSortChange = (latest: boolean) => {
     setSortByLatest(latest);
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page on sort change
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   return (

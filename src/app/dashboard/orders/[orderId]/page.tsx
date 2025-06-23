@@ -6,7 +6,7 @@ import { OrderType } from '@/types/order';
 import { VariantType } from '@/types/variant';
 import { orderService } from '@/services/orderService';
 import { productService } from '@/services/productService';
-import { ArrowLeft, Truck, Download } from 'lucide-react';
+import { ArrowLeft, Truck, Download, Package, MapPin, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,7 +45,7 @@ export default function OrderDetailsPage() {
     length: 10,
     breadth: 10,
     height: 10,
-    pickup_postcode: '400001', // Default Mumbai postcode
+    pickup_postcode: '421201',
     delivery_postcode: '',
     cod: false,
     calculatedWeightGrams: 0,
@@ -53,9 +53,15 @@ export default function OrderDetailsPage() {
     hasMinimumWeightApplied: false
   });
   const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({}); // variantId -> quantity
+  const [pickupLocations, setPickupLocations] = useState<any[]>([]);
+  const [selectedPickupLocation, setSelectedPickupLocation] = useState<string>('Home');
+  const [trackingInfo, setTrackingInfo] = useState<any>(null);
+  const [loadingTracking, setLoadingTracking] = useState(false);
+  const [shipmentSuccess, setShipmentSuccess] = useState<any>(null);
 
   useEffect(() => {
     loadOrder();
+    loadPickupLocations();
   }, [orderId]);
   
   useEffect(() => {
@@ -81,6 +87,11 @@ export default function OrderDetailsPage() {
     // Load product details when order is loaded
     if (order?.product_id) {
       loadProductDetails();
+    }
+
+    // Load tracking info if shipment exists
+    if (order?.shiprocket_shipment_id || order?.tracking_id) {
+      loadTrackingInfo();
     }
   }, [order]);
     // New useEffect to calculate total weight from variants and update shipment data
@@ -125,14 +136,64 @@ export default function OrderDetailsPage() {
     }  
   };
 
+  const loadPickupLocations = async () => {
+    try {
+      const response = await fetch('/api/shipping/pickup-locations');
+      if (response.ok) {
+        const data = await response.json();
+        setPickupLocations(data.data?.shipping_address || []);
+      }
+    } catch (error) {
+      console.error('Error loading pickup locations:', error);
+    }
+  };
+
+  const loadTrackingInfo = async () => {
+    if (!order?.shiprocket_shipment_id && !order?.tracking_id) return;
+    
+    try {
+      setLoadingTracking(true);
+      const response = await fetch('/api/shipping/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shipment_id: order.shiprocket_shipment_id,
+          awb_code: order.tracking_id
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setTrackingInfo(data);
+      }
+    } catch (error) {
+      console.error('Error loading tracking info:', error);
+    } finally {
+      setLoadingTracking(false);
+    }
+  };
+
   const loadProductDetails = async () => {
-    if (!order?.order_variants) return;
     try {
       setProductLoading(true);
-      const orderVariantsObj = JSON.parse(order.order_variants);
-      const productIds = Object.keys(orderVariantsObj);
-      const products = await Promise.all(productIds.map(pid => productService.getProductWithVariants(pid)));
-      setOrderProducts(products);
+      
+      if (order?.order_variants) {
+        // Load product details from variants
+        const orderVariantsObj = JSON.parse(order.order_variants);
+        const productIds = Object.keys(orderVariantsObj);
+        const products = await Promise.all(productIds.map(pid => productService.getProductWithVariants(pid)));
+        setOrderProducts(products);
+        
+        // Set the first product as productData for fallback info
+        if (products.length > 0) {
+          setProductData(products[0]);
+        }
+      } else if (order?.product_id) {
+        // Load single product details
+        const product = await productService.getProductWithVariants(order.product_id);
+        setProductData(product);
+        setOrderProducts([product]);
+      }
     } catch (error) {
       console.error('Error loading product details:', error);
       toast({
@@ -281,24 +342,34 @@ export default function OrderDetailsPage() {
     try {
       setSaving(true);
       
-      // Map order variants to order items for Shiprocket
-      const orderItems = orderVariants.map(variant => ({
-        name: variant.name || 'Product',
-        sku: variant.$id || '',
-        units: 1, // Assuming quantity is always 1, adjust as needed
-        selling_price: variant.price || 0,
-        discount: 0,
-        tax: 0,
-        hsn: variant.hsn_code || ''
-      }));
+      // Get better product details for Shiprocket
+      const orderItems = orderVariants.length > 0 
+        ? orderVariants.map(variant => ({
+            name: variant.name || productData?.name || 'Product',
+            sku: variant.$id || '',
+            units: 1,
+            selling_price: variant.price || 0,
+            discount: 0,
+            tax: 0,
+            hsn: variant.hsn_code || productData?.hsn_code || ''
+          }))
+        : [{
+            name: productData?.name || 'Product',
+            sku: order.$id,
+            units: order.order_items || 1,
+            selling_price: order.total_price,
+            discount: 0,
+            tax: 0,
+            hsn: productData?.hsn_code || ''
+          }];
       
       // Construct shipment data for Shiprocket
       const shipmentRequestData = {
         order_id: order.$id,
         order_date: new Date(order.$createdAt).toISOString().split('T')[0],
-        pickup_location: "Home",
+        pickup_location: selectedPickupLocation,
         channel_id: "",
-        comment: "Created from admin dashboard",
+        comment: "Thank you for shopping with us! Created from admin dashboard",
         billing_customer_name: `${order.first_name} ${order.last_name}`,
         billing_last_name: order.last_name,
         billing_address: order.address,
@@ -328,16 +399,20 @@ export default function OrderDetailsPage() {
       };
       
       const result = await orderService.createShiprocketOrder(order.$id, shipmentRequestData);
+      
+      // Store shipment success details
+      setShipmentSuccess(result);
+      
       await loadOrder(); // Reload order with updated shipping info
+      await loadTrackingInfo(); // Load tracking info
       
       toast({
-        title: 'Shipment created',
-        description: `Shipment created with ${companyName}`,
+        title: 'Shipment created successfully!',
+        description: `Shipment created with ${companyName}. AWB: ${result.payload?.awb_code || 'N/A'}`,
       });
       
-      // Reset the selected courier ID
+      // Reset the selected courier ID and shipping rates
       setSelectedCourierId(null);
-      // Reset shipping rates to clear the selection UI
       setShippingRates([]);
     } catch (error) {
       console.error('Error creating shipment:', error);
@@ -453,14 +528,12 @@ export default function OrderDetailsPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Payment Information</CardTitle>
-                {order.payment_type === "COD" && (
-                  <Badge variant="outline" className="bg-orange-500/20 text-orange-600 border-orange-200">
-                    Cash on Delivery
-                  </Badge>
-                )}
-              </div>
+              <CardTitle>Payment Information</CardTitle>
+              {order.payment_type === "COD" && (
+                <Badge variant="outline" className="bg-orange-500/20 text-orange-600 border-orange-200">
+                  Cash on Delivery
+                </Badge>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
               <InfoRow label="Payment Type" value={order.payment_type} />
@@ -499,29 +572,111 @@ export default function OrderDetailsPage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-3"><InfoRow label="Total Items" value={order.order_items?.toString() || '0'} />
-              {/* Show all product IDs and names */}
-              {productLoading ? (
-                <div className="flex flex-col sm:flex-row sm:justify-between">
-                  <span className="text-muted-foreground">Product Names:</span>
-                  <Shimmer type="text" className="w-32" />
+            <CardContent>
+              {/* Product Details Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Name</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Category</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">HSN</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">SKU</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Qty</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Unit price</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Discount</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Tax</th>
+                      <th className="border border-gray-200 px-4 py-2 text-left font-medium text-gray-700">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderVariants.length > 0 ? (
+                      orderVariants.map((variant, index) => (
+                        <tr key={variant.$id || index} className="hover:bg-gray-50">
+                          <td className="border border-gray-200 px-4 py-2">
+                            <div className="font-medium">{variant.name || productData?.name || 'Product'}</div>
+                            <div className="text-xs text-gray-500">ID: {variant.$id}</div>
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2">
+                            {productData?.category || 'Default Category'}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2">
+                            {variant.hsn_code || productData?.hsn_code || '-'}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 font-mono text-sm">
+                            {variant.$id}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 text-center">
+                            {variantQuantities[variant.$id] || 1}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2">
+                            ₹{variant.price || 0}
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2">
+                            ₹0
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2">
+                            0
+                          </td>
+                          <td className="border border-gray-200 px-4 py-2 font-medium">
+                            ₹{(variant.price || 0) * (variantQuantities[variant.$id] || 1)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-4 py-2">
+                          <div className="font-medium">{productData?.name || 'Product'}</div>
+                          <div className="text-xs text-gray-500">ID: {order.product_id}</div>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          {productData?.category || 'Default Category'}
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          {productData?.hsn_code || '-'}
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 font-mono text-sm">
+                          {order.$id}
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 text-center">
+                          {order.order_items || 1}
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          ₹{order.total_price}
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          ₹0
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2">
+                          0
+                        </td>
+                        <td className="border border-gray-200 px-4 py-2 font-medium">
+                          ₹{order.total_price}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Summary */}
+              <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium">Product Total ({orderVariants.length || 1} Item{(orderVariants.length || 1) !== 1 ? 's' : ''})</span>
+                  <span className="font-medium">₹ {order.total_price}</span>
                 </div>
-              ) : orderProducts.length > 0 ? (
-                <div className="flex flex-col space-y-2">
-                  {orderProducts.map((prod, idx) => (
-                    <div key={prod.$id || idx} className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200 font-medium">
-                        {prod.name}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">(ID: {prod.$id})</span>
-                    </div>
-                  ))}
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>Order Total</span>
+                  <span>₹ {order.total_price}</span>
                 </div>
-              ) : null}              {productData && (
-                <>
-                  <InfoRow label="Category" value={productData.category} />                  {productData.tags && (
+              </div>
+
+              {/* Additional Product Information */}
+              {productData && (
+                <div className="mt-4 space-y-3">
+                  {productData.tags && (
                     <div className="flex flex-col space-y-1">
-                      <span className="text-muted-foreground">Tags:</span>
+                      <span className="text-muted-foreground font-medium">Tags:</span>
                       <div className="flex flex-wrap gap-1">
                         {productData.tags.split(',').map((tag: string, index: number) => (
                           <Badge key={index} variant="secondary" className="bg-blue-500/10 text-blue-600">
@@ -533,13 +688,13 @@ export default function OrderDetailsPage() {
                   )}
                   {productData.ingredients && (
                     <div className="flex flex-col space-y-1">
-                      <span className="text-muted-foreground">Ingredients:</span>
-                      <div className="text-sm">
+                      <span className="text-muted-foreground font-medium">Ingredients:</span>
+                      <div className="text-sm bg-white p-2 rounded border">
                         {productData.ingredients}
                       </div>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -612,6 +767,123 @@ export default function OrderDetailsPage() {
             </CardContent>
           </Card>
 
+          {/* Shipment Success Details */}
+          {shipmentSuccess && shipmentSuccess.status === 1 && (
+            <Card className="md:col-span-2 border-green-200 bg-green-50">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CardTitle className="text-green-800">Shipment Created Successfully!</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <InfoRow label="Order ID" value={shipmentSuccess.payload?.order_id} />
+                    <InfoRow label="Shipment ID" value={shipmentSuccess.payload?.shipment_id} />
+                    <InfoRow label="AWB Code" value={shipmentSuccess.payload?.awb_code} />
+                    <InfoRow label="Courier" value={shipmentSuccess.payload?.courier_name} />
+                    <InfoRow label="Applied Weight" value={`${shipmentSuccess.payload?.applied_weight} kg`} />
+                    <InfoRow label="COD" value={shipmentSuccess.payload?.cod ? 'Yes' : 'No'} />
+                  </div>
+                  <div className="space-y-2">
+                    <InfoRow label="Pickup Scheduled" value={shipmentSuccess.payload?.pickup_scheduled_date} />
+                    <InfoRow label="Routing Code" value={shipmentSuccess.payload?.routing_code || 'N/A'} />
+                    <InfoRow label="Pickup Token" value={shipmentSuccess.payload?.pickup_token_number} />
+                    <div className="flex flex-col sm:flex-row sm:justify-between">
+                      <span className="text-muted-foreground">Shipping Label:</span>
+                      {shipmentSuccess.payload?.label_url && (
+                        <a href={shipmentSuccess.payload.label_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                          <Download className="w-4 h-4" /> Download Label
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:justify-between">
+                      <span className="text-muted-foreground">Manifest:</span>
+                      {shipmentSuccess.payload?.manifest_url && (
+                        <a href={shipmentSuccess.payload.manifest_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                          <Download className="w-4 h-4" /> Download Manifest
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Live Tracking Information */}
+          {(order?.shiprocket_shipment_id || order?.tracking_id) && (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
+                    <CardTitle>Live Tracking Information</CardTitle>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={loadTrackingInfo}
+                    disabled={loadingTracking}
+                  >
+                    {loadingTracking ? 'Loading...' : 'Refresh'}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingTracking ? (
+                  <div className="space-y-2">
+                    <Shimmer type="text" className="w-full" />
+                    <Shimmer type="text" className="w-3/4" />
+                    <Shimmer type="text" className="w-1/2" />
+                  </div>
+                ) : trackingInfo ? (
+                  <div className="space-y-4">
+                    {trackingInfo.tracking_data && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Current Status</h4>
+                        <div className="bg-gray-50 p-3 rounded-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Clock className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium">{trackingInfo.tracking_data.track_status}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{trackingInfo.tracking_data.track_location}</p>
+                          <p className="text-xs text-muted-foreground">{trackingInfo.tracking_data.track_time}</p>
+                        </div>
+                      </div>
+                    )}
+                    {trackingInfo.shipment_track && trackingInfo.shipment_track.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Tracking History</h4>
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                          {trackingInfo.shipment_track.map((track: any, index: number) => (
+                            <div key={index} className="flex items-start gap-3 p-2 border-l-2 border-blue-200">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{track.current_status}</p>
+                                <p className="text-xs text-muted-foreground">{track.delivered_to}</p>
+                                <p className="text-xs text-muted-foreground">{track.updated_at}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">No tracking information available</p>
+                    <Button variant="outline" size="sm" onClick={loadTrackingInfo} className="mt-2">
+                      Load Tracking Info
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Shipping Status</CardTitle>
@@ -659,7 +931,14 @@ export default function OrderDetailsPage() {
             <Card className="md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Shiprocket Shipping Calculation</CardTitle>
-              <Truck className="h-5 w-5 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                {order?.shiprocket_shipment_id && (
+                  <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200">
+                    Shipment Created
+                  </Badge>
+                )}
+                <Truck className="h-5 w-5 text-muted-foreground" />
+              </div>
             </CardHeader>            <CardContent>
               {orderVariants.length > 0 && (
                 <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-100">
@@ -696,6 +975,7 @@ export default function OrderDetailsPage() {
                         step="0.1"
                         value={shipmentData.weight}
                         onChange={(e) => handleShipmentDataChange('weight', parseFloat(e.target.value))}
+                        disabled={!!order?.shiprocket_shipment_id}
                       />
                     </div>
                     <div>
@@ -705,6 +985,7 @@ export default function OrderDetailsPage() {
                         type="number" 
                         value={shipmentData.length}
                         onChange={(e) => handleShipmentDataChange('length', parseInt(e.target.value))}
+                        disabled={!!order?.shiprocket_shipment_id}
                       />
                     </div>
                   </div>
@@ -716,6 +997,7 @@ export default function OrderDetailsPage() {
                         type="number" 
                         value={shipmentData.breadth}
                         onChange={(e) => handleShipmentDataChange('breadth', parseInt(e.target.value))}
+                        disabled={!!order?.shiprocket_shipment_id}
                       />
                     </div>
                     <div>
@@ -725,11 +1007,39 @@ export default function OrderDetailsPage() {
                         type="number" 
                         value={shipmentData.height}
                         onChange={(e) => handleShipmentDataChange('height', parseInt(e.target.value))}
+                        disabled={!!order?.shiprocket_shipment_id}
                       />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="pickup-location" className="mb-1 flex items-center gap-1">
+                      Pickup Location
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                    </Label>
+                    <Select
+                      value={selectedPickupLocation}
+                      onValueChange={setSelectedPickupLocation}
+                      disabled={!!order?.shiprocket_shipment_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select pickup location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pickupLocations.map((location) => (
+                          <SelectItem key={location.id} value={location.pickup_location}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{location.pickup_location}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {location.address}, {location.city} - {location.pin_code}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label htmlFor="pickup-pincode" className="mb-1">Pickup Pincode</Label>
                     <Input 
@@ -737,6 +1047,7 @@ export default function OrderDetailsPage() {
                       type="text" 
                       value={shipmentData.pickup_postcode}
                       onChange={(e) => handleShipmentDataChange('pickup_postcode', e.target.value)}
+                      disabled={!!order?.shiprocket_shipment_id}
                     />
                   </div>
                   <div>
@@ -746,6 +1057,7 @@ export default function OrderDetailsPage() {
                       type="text" 
                       value={shipmentData.delivery_postcode}
                       onChange={(e) => handleShipmentDataChange('delivery_postcode', e.target.value)}
+                      disabled={!!order?.shiprocket_shipment_id}
                     />
                   </div>
                   <div className="flex items-center gap-3">
@@ -753,6 +1065,7 @@ export default function OrderDetailsPage() {
                     <Select
                       value={shipmentData.cod ? 'true' : 'false'}
                       onValueChange={(value) => handleShipmentDataChange('cod', value)}
+                      disabled={!!order?.shiprocket_shipment_id}
                     >
                       <SelectTrigger id="cod-select" className="w-24">
                         <SelectValue placeholder="COD" />
@@ -773,7 +1086,7 @@ export default function OrderDetailsPage() {
               
               <Button 
                 onClick={calculateShipping} 
-                disabled={shippingCalculating}
+                disabled={shippingCalculating || !!order?.shiprocket_shipment_id}
                 className="w-full md:w-auto mt-4"
                 variant="default"
               >
@@ -789,7 +1102,7 @@ export default function OrderDetailsPage() {
                   <>Calculate Shipping Rates</>
                 )}
               </Button>
-                {shippingRates.length > 0 && (
+                {shippingRates.length > 0 && !order?.shiprocket_shipment_id && (
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Available Shipping Options</h3>
                   <div className="grid gap-4">

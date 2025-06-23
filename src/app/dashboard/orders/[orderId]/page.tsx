@@ -55,6 +55,7 @@ export default function OrderDetailsPage() {
   const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({}); // variantId -> quantity
   const [pickupLocations, setPickupLocations] = useState<any[]>([]);
   const [selectedPickupLocation, setSelectedPickupLocation] = useState<string>('Home');
+  const [loadingPickupLocations, setLoadingPickupLocations] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<any>(null);
   const [loadingTracking, setLoadingTracking] = useState(false);
   const [shipmentSuccess, setShipmentSuccess] = useState<any>(null);
@@ -138,13 +139,28 @@ export default function OrderDetailsPage() {
 
   const loadPickupLocations = async () => {
     try {
+      setLoadingPickupLocations(true);
       const response = await fetch('/api/shipping/pickup-locations');
       if (response.ok) {
         const data = await response.json();
+        console.log('Pickup locations response:', data);
         setPickupLocations(data.data?.shipping_address || []);
+        
+        // If we have pickup locations from API, set the first one as default
+        if (data.data?.shipping_address && data.data.shipping_address.length > 0) {
+          setSelectedPickupLocation(data.data.shipping_address[0].pickup_location);
+        }
+      } else {
+        console.error('Failed to fetch pickup locations:', response.status, response.statusText);
+        // Fallback to default pickup location
+        setPickupLocations([]);
       }
     } catch (error) {
       console.error('Error loading pickup locations:', error);
+      // Fallback to default pickup location
+      setPickupLocations([]);
+    } finally {
+      setLoadingPickupLocations(false);
     }
   };
 
@@ -348,7 +364,7 @@ export default function OrderDetailsPage() {
             name: variant.name || productData?.name || 'Product',
             sku: variant.$id || '',
             units: 1,
-            selling_price: variant.price || 0,
+            selling_price: variant.sale_price || order.total_price, // Use sale price if available, otherwise order total
             discount: 0,
             tax: 0,
             hsn: variant.hsn_code || productData?.hsn_code || ''
@@ -403,8 +419,24 @@ export default function OrderDetailsPage() {
       // Store shipment success details
       setShipmentSuccess(result);
       
+      // Update order with Shiprocket details and set status to shipped
+      if (result.status === 1 && result.payload) {
+        await orderService.updateOrder(order.$id, {
+          shiprocket_order_id: result.payload.order_id?.toString() || '',
+          shiprocket_shipment_id: result.payload.shipment_id?.toString() || '',
+          tracking_id: result.payload.awb_code || '',
+          shipping_status: 'shipped',
+          label_url: result.payload.label_url || '',
+          manifest_url: result.payload.manifest_url || ''
+        });
+      }
+      
       await loadOrder(); // Reload order with updated shipping info
-      await loadTrackingInfo(); // Load tracking info
+      
+      // Automatically load tracking info after successful shipment creation
+      setTimeout(() => {
+        loadTrackingInfo();
+      }, 2000); // Wait 2 seconds for Shiprocket to process
       
       toast({
         title: 'Shipment created successfully!',
@@ -610,16 +642,25 @@ export default function OrderDetailsPage() {
                             {variantQuantities[variant.$id] || 1}
                           </td>
                           <td className="border border-gray-200 px-4 py-2">
-                            ₹{variant.price || 0}
+                            <div className="flex flex-col">
+                              <span>₹{variant.sale_price || variant.price || order.total_price}</span>
+                              {variant.sale_price && variant.price && variant.sale_price !== variant.price && (
+                                <span className="text-xs text-gray-500 line-through">₹{variant.price}</span>
+                              )}
+                            </div>
                           </td>
                           <td className="border border-gray-200 px-4 py-2">
-                            ₹0
+                            {variant.sale_price && variant.price && variant.sale_price !== variant.price ? (
+                              <span className="text-green-600">₹{variant.price - variant.sale_price}</span>
+                            ) : (
+                              '₹0'
+                            )}
                           </td>
                           <td className="border border-gray-200 px-4 py-2">
                             0
                           </td>
                           <td className="border border-gray-200 px-4 py-2 font-medium">
-                            ₹{(variant.price || 0) * (variantQuantities[variant.$id] || 1)}
+                            ₹{variant.sale_price || variant.price || order.total_price}
                           </td>
                         </tr>
                       ))
@@ -813,13 +854,13 @@ export default function OrderDetailsPage() {
           )}
 
           {/* Live Tracking Information */}
-          {(order?.shiprocket_shipment_id || order?.tracking_id) && (
+          {(order?.shiprocket_shipment_id || order?.tracking_id || shipmentSuccess) && (
             <Card className="md:col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-primary" />
-                    <CardTitle>Live Tracking Information</CardTitle>
+                    <CardTitle>Live Tracking & Shipment Information</CardTitle>
                   </div>
                   <Button 
                     variant="outline" 
@@ -831,39 +872,127 @@ export default function OrderDetailsPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
+                {/* Shipment Details */}
+                <div className="grid md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-blue-800">Shipment Details</h4>
+                    <InfoRow label="AWB Code" value={order?.tracking_id || shipmentSuccess?.payload?.awb_code} />
+                    <InfoRow label="Courier" value={shipmentSuccess?.payload?.courier_name || 'N/A'} />
+                    <InfoRow label="Weight Applied" value={shipmentSuccess?.payload?.applied_weight ? `${shipmentSuccess.payload.applied_weight} kg` : 'N/A'} />
+                    <InfoRow label="Pickup Scheduled" value={shipmentSuccess?.payload?.pickup_scheduled_date || 'N/A'} />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-blue-800">Documents & Links</h4>
+                    <div className="space-y-2">
+                      {(order?.label_url || shipmentSuccess?.payload?.label_url) && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Shipping Label:</span>
+                          <a 
+                            href={order?.label_url || shipmentSuccess?.payload?.label_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:underline flex items-center gap-1 text-sm"
+                          >
+                            <Download className="w-3 h-3" /> Download
+                          </a>
+                        </div>
+                      )}
+                      {(order?.manifest_url || shipmentSuccess?.payload?.manifest_url) && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Manifest:</span>
+                          <a 
+                            href={order?.manifest_url || shipmentSuccess?.payload?.manifest_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:underline flex items-center gap-1 text-sm"
+                          >
+                            <Download className="w-3 h-3" /> Download
+                          </a>
+                        </div>
+                      )}
+                      <InfoRow label="Pickup Token" value={shipmentSuccess?.payload?.pickup_token_number || 'N/A'} />
+                      <InfoRow label="Routing Code" value={shipmentSuccess?.payload?.routing_code || 'N/A'} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Tracking Status */}
                 {loadingTracking ? (
                   <div className="space-y-2">
                     <Shimmer type="text" className="w-full" />
                     <Shimmer type="text" className="w-3/4" />
                     <Shimmer type="text" className="w-1/2" />
                   </div>
-                ) : trackingInfo ? (
+                ) : trackingInfo?.tracking_data ? (
                   <div className="space-y-4">
-                    {trackingInfo.tracking_data && (
+                    {/* Current Tracking Status */}
+                    {trackingInfo.tracking_data.shipment_track && trackingInfo.tracking_data.shipment_track.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="font-medium">Current Status</h4>
-                        <div className="bg-gray-50 p-3 rounded-md">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-green-600" />
+                          Current Tracking Status
+                        </h4>
+                        <div className="bg-green-50 p-3 rounded-md border border-green-200">
                           <div className="flex items-center gap-2 mb-2">
-                            <Clock className="h-4 w-4 text-blue-600" />
-                            <span className="font-medium">{trackingInfo.tracking_data.track_status}</span>
+                            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                            <span className="font-medium text-green-800">
+                              {trackingInfo.tracking_data.shipment_track[0]?.current_status || 'Processing'}
+                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">{trackingInfo.tracking_data.track_location}</p>
-                          <p className="text-xs text-muted-foreground">{trackingInfo.tracking_data.track_time}</p>
+                          <p className="text-sm text-green-700">
+                            {trackingInfo.tracking_data.shipment_track[0]?.destination || 'Unknown destination'}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            EDD: {trackingInfo.tracking_data.shipment_track[0]?.edd || 'Not available'}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            Courier: {trackingInfo.tracking_data.shipment_track[0]?.courier_name || 'Not available'}
+                          </p>
+                          {trackingInfo.tracking_data.track_url && (
+                            <div className="mt-2">
+                              <a 
+                                href={trackingInfo.tracking_data.track_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                              >
+                                <Package className="w-3 h-3" />
+                                Track on Shiprocket
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
-                    {trackingInfo.shipment_track && trackingInfo.shipment_track.length > 0 && (
+                    
+                    {/* Shiprocket Status Summary */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Shipment Summary</h4>
+                      <div className="bg-gray-50 p-3 rounded-md grid md:grid-cols-2 gap-2">
+                        <InfoRow label="Track Status" value={trackingInfo.tracking_data.track_status === 1 ? 'Active' : 'Inactive'} />
+                        <InfoRow label="Shipment Status" value={trackingInfo.tracking_data.shipment_status} />
+                        <InfoRow label="Weight" value={`${trackingInfo.tracking_data.shipment_track[0]?.weight || '0'} kg`} />
+                        <InfoRow label="Packages" value={trackingInfo.tracking_data.shipment_track[0]?.packages || '1'} />
+                        <InfoRow label="Origin" value={trackingInfo.tracking_data.shipment_track[0]?.origin || 'Unknown'} />
+                        <InfoRow label="Destination" value={trackingInfo.tracking_data.shipment_track[0]?.destination || 'Unknown'} />
+                        <InfoRow label="POD Status" value={trackingInfo.tracking_data.shipment_track[0]?.pod_status || 'N/A'} />
+                        <InfoRow label="Return" value={trackingInfo.tracking_data.is_return ? 'Yes' : 'No'} />
+                      </div>
+                    </div>
+
+                    {/* Tracking Activities */}
+                    {trackingInfo.tracking_data.shipment_track_activities && trackingInfo.tracking_data.shipment_track_activities.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="font-medium">Tracking History</h4>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {trackingInfo.shipment_track.map((track: any, index: number) => (
-                            <div key={index} className="flex items-start gap-3 p-2 border-l-2 border-blue-200">
+                        <h4 className="font-medium">Tracking Activities</h4>
+                        <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-2">
+                          {trackingInfo.tracking_data.shipment_track_activities.map((activity: any, index: number) => (
+                            <div key={index} className="flex items-start gap-3 p-2 border-l-2 border-blue-200 bg-white rounded">
                               <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
                               <div className="flex-1">
-                                <p className="font-medium text-sm">{track.current_status}</p>
-                                <p className="text-xs text-muted-foreground">{track.delivered_to}</p>
-                                <p className="text-xs text-muted-foreground">{track.updated_at}</p>
+                                <p className="font-medium text-sm">{activity.activity}</p>
+                                <p className="text-xs text-muted-foreground">{activity.location}</p>
+                                <p className="text-xs text-muted-foreground">{activity.date}</p>
                               </div>
                             </div>
                           ))}
@@ -874,7 +1003,7 @@ export default function OrderDetailsPage() {
                 ) : (
                   <div className="text-center py-4">
                     <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground">No tracking information available</p>
+                    <p className="text-muted-foreground">Click refresh to load live tracking information</p>
                     <Button variant="outline" size="sm" onClick={loadTrackingInfo} className="mt-2">
                       Load Tracking Info
                     </Button>
@@ -928,18 +1057,19 @@ export default function OrderDetailsPage() {
               </div>
             </CardContent>
           </Card>
+            {order?.shipping_status !== 'shipped' && !order?.shiprocket_shipment_id && (
             <Card className="md:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Shiprocket Shipping Calculation</CardTitle>
-              <div className="flex items-center gap-2">
-                {order?.shiprocket_shipment_id && (
-                  <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200">
-                    Shipment Created
-                  </Badge>
-                )}
-                <Truck className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>            <CardContent>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Shiprocket Shipping Calculation</CardTitle>
+                <div className="flex items-center gap-2">
+                  {order?.shiprocket_shipment_id && (
+                    <Badge variant="outline" className="bg-green-500/20 text-green-600 border-green-200">
+                      Shipment Created
+                    </Badge>
+                  )}
+                  <Truck className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </CardHeader>            <CardContent>
               {orderVariants.length > 0 && (
                 <div className="mb-4 p-3 rounded-md bg-green-50 border border-green-100">
                   <div className="flex flex-col gap-1 text-green-700 text-sm">
@@ -1021,22 +1151,33 @@ export default function OrderDetailsPage() {
                     <Select
                       value={selectedPickupLocation}
                       onValueChange={setSelectedPickupLocation}
-                      disabled={!!order?.shiprocket_shipment_id}
+                      disabled={!!order?.shiprocket_shipment_id || loadingPickupLocations}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select pickup location" />
+                        <SelectValue placeholder={loadingPickupLocations ? "Loading pickup locations..." : "Select pickup location"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {pickupLocations.map((location) => (
-                          <SelectItem key={location.id} value={location.pickup_location}>
+                        {pickupLocations.length > 0 ? (
+                          pickupLocations.map((location) => (
+                            <SelectItem key={location.id} value={location.pickup_location}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{location.pickup_location}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {location.address}, {location.city} - {location.pin_code}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="Home">
                             <div className="flex flex-col">
-                              <span className="font-medium">{location.pickup_location}</span>
+                              <span className="font-medium">Home</span>
                               <span className="text-xs text-muted-foreground">
-                                {location.address}, {location.city} - {location.pin_code}
+                                flat 206 B wing gajanan heights, Thane - 421201
                               </span>
                             </div>
                           </SelectItem>
-                        ))}
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1153,6 +1294,7 @@ export default function OrderDetailsPage() {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     </div>

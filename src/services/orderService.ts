@@ -1,6 +1,15 @@
 import { databases } from '@/lib/appwrite';
 import { OrderType } from '@/types/order';
 import { VariantType } from '@/types/variant';
+import { Query } from 'appwrite';
+
+export interface PaginatedOrdersResponse {
+  orders: OrderType[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 export const orderService = {
   async getOrders(): Promise<OrderType[]> {
@@ -9,6 +18,136 @@ export const orderService = {
       process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!
     );
     return response.documents as OrderType[];
+  },
+
+  async getOrdersPaginated(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    statusFilter?: string,
+    sortByLatest: boolean = true
+  ): Promise<PaginatedOrdersResponse> {
+    const offset = (page - 1) * limit;
+    
+    // If search is provided, we need to search across multiple fields
+    if (search && search.trim()) {
+      // Make multiple parallel queries for different fields
+      const searchQueries = [
+        // Search by first_name
+        databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+          [Query.search('first_name', search), sortByLatest ? Query.orderDesc('$createdAt') : Query.orderAsc('$createdAt')]
+        ),
+        // Search by email
+        databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+          [Query.search('email', search), sortByLatest ? Query.orderDesc('$createdAt') : Query.orderAsc('$createdAt')]
+        ),
+        // Search by phone
+        databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+          [Query.search('phone_number', search), sortByLatest ? Query.orderDesc('$createdAt') : Query.orderAsc('$createdAt')]
+        ),
+        // Search by order ID
+        databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+          [Query.startsWith('$id', search), sortByLatest ? Query.orderDesc('$createdAt') : Query.orderAsc('$createdAt')]
+        )
+      ];
+
+      try {
+        const results = await Promise.all(searchQueries);
+        
+        // Combine results and remove duplicates
+        const allOrders = new Map<string, OrderType>();
+        results.forEach(result => {
+          result.documents.forEach(doc => {
+            allOrders.set(doc.$id, doc as OrderType);
+          });
+        });
+
+        let filteredOrders = Array.from(allOrders.values());
+
+        // Apply status filter if provided
+        if (statusFilter && statusFilter !== 'all') {
+          filteredOrders = filteredOrders.filter(order => order.shipping_status === statusFilter);
+        }
+
+        // Sort by creation date based on sortByLatest parameter
+        filteredOrders.sort((a, b) => {
+          const dateA = new Date(a.$createdAt).getTime();
+          const dateB = new Date(b.$createdAt).getTime();
+          return sortByLatest ? dateB - dateA : dateA - dateB;
+        });
+
+        // Apply pagination
+        const total = filteredOrders.length;
+        const totalPages = Math.ceil(total / limit);
+        const paginatedOrders = filteredOrders.slice(offset, offset + limit);
+
+        return {
+          orders: paginatedOrders,
+          total,
+          page,
+          limit,
+          totalPages
+        };
+      } catch (error) {
+        console.error('Error searching orders:', error);
+        // Fallback to simple query
+        const queries = [
+          Query.limit(limit),
+          Query.offset(offset),
+          sortByLatest ? Query.orderDesc('$createdAt') : Query.orderAsc('$createdAt')
+        ];
+        
+        const response = await databases.listDocuments(
+          process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+          process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+          queries
+        );
+
+        return {
+          orders: response.documents as OrderType[],
+          total: response.total,
+          page,
+          limit,
+          totalPages: Math.ceil(response.total / limit)
+        };
+      }
+    }
+
+    // No search, regular pagination
+    const queries = [
+      Query.limit(limit),
+      Query.offset(offset),
+      sortByLatest ? Query.orderDesc('$createdAt') : Query.orderAsc('$createdAt')
+    ];
+
+    // Add status filter if provided
+    if (statusFilter && statusFilter !== 'all') {
+      queries.push(Query.equal('shipping_status', statusFilter));
+    }
+
+    const response = await databases.listDocuments(
+      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+      process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+      queries
+    );
+
+    const totalPages = Math.ceil(response.total / limit);
+
+    return {
+      orders: response.documents as OrderType[],
+      total: response.total,
+      page,
+      limit,
+      totalPages
+    };
   },
 
   async getOrderAnalytics() {

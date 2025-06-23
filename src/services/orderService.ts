@@ -1,14 +1,31 @@
 import { databases } from '@/lib/appwrite';
 import { OrderType } from '@/types/order';
 import { VariantType } from '@/types/variant';
+import { Query } from 'appwrite';
 
 export const orderService = {
   async getOrders(): Promise<OrderType[]> {
-    const response = await databases.listDocuments(
-      process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
-      process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!
-    );
-    return response.documents as OrderType[];
+    const allOrders: OrderType[] = [];
+    let offset = 0;
+    const limit = 100; // Appwrite max per request is 100
+    let fetched = 0;
+    let total = 0;
+    do {
+      const response = await databases.listDocuments(
+        process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!,
+        process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID!,
+        [Query.limit(limit), Query.offset(offset)]
+      );
+      if (response.documents && response.documents.length > 0) {
+        allOrders.push(...(response.documents as OrderType[]));
+        fetched = response.documents.length;
+        total = response.total || allOrders.length;
+        offset += fetched;
+      } else {
+        break;
+      }
+    } while (allOrders.length < total);
+    return allOrders;
   },
 
   async getOrderAnalytics() {
